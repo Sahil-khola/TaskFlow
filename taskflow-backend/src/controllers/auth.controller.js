@@ -39,10 +39,15 @@ export const login = async (req,res) => {
 try {
     const { email, password } = req.body;
 
+    // DB aur bcrypt se pehle hi check — khali field ke saath query mat karo
+    if (!email || !password) {
+      return res.status(400).json({ success: false, msg: "Email and password are required" });
+    }
+
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, msg: "User not found" });
+      return res.status(401).json({ success: false, msg: "Invalid email or password" });
     }
 
     // Compare password

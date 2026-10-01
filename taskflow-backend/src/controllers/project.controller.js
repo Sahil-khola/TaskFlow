@@ -1,182 +1,236 @@
 import Project from '../models/Project.js';
+import User from '../models/User.js';
+import Task from '../models/Task.js';
+import mongoose from 'mongoose';
 
 
-export const createProject = async (req,res) => {
+const isManager = (role) => role === 'OWNER' || role === 'ADMIN';
+
+const ASSIGNABLE_ROLES = ['ADMIN', 'MEMBER'];
+
+const loadProjectForUser = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    res.status(400).json({ success: false, msg: 'Invalid project id' });
+    return null;
+  }
+
+  const project = await Project.findById(id);
+  if (!project) {
+    res.status(404).json({ success: false, msg: 'Project not found' });
+    return null;
+  }
+
+  const member = project.members.find((m) => m.userId.toString() === req.user.id);
+  if (!member) {
+    res.status(403).json({ success: false, msg: 'You are not a member of this project' });
+    return null;
+  }
+
+  return { project, role: member.role };
+};
+
+export const createProject = async (req, res) => {
   try {
     const { name, description } = req.body;
 
     // Validate input
-    if (!name || !description) {
-      return res.status(400).json({ success: false, msg: "Name and description are required" });
+    if (!name) {
+      return res.status(400).json({ success: false, msg: 'Name is required' });
     }
 
-    // Create project
+    // Create project — creator isme OWNER ban ke add hota hai
     const project = await Project.create({
       name,
-      description,
+      description: description || '',
       ownerId: req.user.id,
-      members: [{ userId: req.user.id, role: "OWNER" }]
+      members: [{ userId: req.user.id, role: 'OWNER' }],
     });
 
     // Success response
     res.status(201).json({
       success: true,
-      msg: "Project created successfully",
-      data: { project }
+      msg: 'Project created successfully',
+      data: { project },
     });
   } catch (error) {
-    console.error("CreateProject error:", error);
-    res.status(500).json({ success: false, msg: "Internal server error" });
+    console.error('CreateProject error:', error);
+    res.status(500).json({ success: false, msg: 'Internal server error' });
   }
 };
 
 export const getProjects = async (req, res) => {
   try {
-   
-    const id = req.user.id;
-    const projects = await Project.find({ ownerId: id });
-    
-    if (!projects) {
-      return res.status(404).json({ success: false, msg: "Projects not found" });
-    }
+    const projects = await Project.find({
+      $or: [{ ownerId: req.user.id }, { 'members.userId': req.user.id }],
+    }).sort({ updatedAt: -1 });
 
     res.status(200).json({
       success: true,
-      msg: "Projects fetched successfully",
-      data: projects
+      msg: 'Projects fetched successfully',
+      data: projects,
     });
   } catch (error) {
-    console.error("GetProjects error:", error);
-    res.status(500).json({ success: false, msg: "Internal server error" });
+    console.error('GetProjects error:', error);
+    res.status(500).json({ success: false, msg: 'Internal server error' });
   }
 };
 
 export const getProjectById = async (req, res) => {
   try {
-   
-    const id = req.params.id;
-    const project = await Project.findById(id);
-  
-    if (!project) {
-      return res.status(404).json({ success: false, msg: "Project not found" });
-    }
+    const context = await loadProjectForUser(req, res);
+    if (!context) return;
+
+    const project = await context.project.populate('members.userId', 'name email');
 
     res.status(200).json({
       success: true,
-      msg: "Project fetched successfully",
-      data: project
+      msg: 'Project fetched successfully',
+      data: { project },
     });
   } catch (error) {
-    console.error("GetProjectById error:", error);
-    res.status(500).json({ success: false, msg: "Internal server error" });
+    console.error('GetProjectById error:', error);
+    res.status(500).json({ success: false, msg: 'Internal server error' });
   }
 };
-
 
 export const updateProject = async (req, res) => {
   try {
     const { name, description } = req.body;
-    
-    // Find project
-    const id = req.params.id;
-    const project = await Project.findById(id);
-    if (!project) {
-      return res.status(404).json({ success: false, msg: "Project not found" });
+
+    const context = await loadProjectForUser(req, res);
+    if (!context) return;
+
+    // Update sirf OWNER ya ADMIN kar sakta hai
+    if (!isManager(context.role)) {
+      return res.status(403).json({ success: false, msg: 'Owner or Admin access required' });
     }
 
-    // Update fields (only if provided)
-    if (name) project.name = name;
-    if (description) project.description = description;
+    if (name) context.project.name = name;
+    if (description !== undefined) context.project.description = description;
 
-    const updatedProject = await project.save();
+    const updatedProject = await context.project.save();
 
     res.status(200).json({
       success: true,
-      msg: "Project updated successfully",
-      data: updatedProject
+      msg: 'Project updated successfully',
+      data: updatedProject,
     });
   } catch (error) {
-    console.error("UpdateProject error:", error);
-    res.status(500).json({ success: false, msg: "Internal server error" });
+    console.error('UpdateProject error:', error);
+    res.status(500).json({ success: false, msg: 'Internal server error' });
   }
 };
 
 export const deleteProject = async (req, res) => {
   try {
-    const { id } = req.params;
-    const project = await Project.findById(id);
-    if (!project) {
-      return res.status(404).json({ success: false, msg: "Project not found" });
+    const context = await loadProjectForUser(req, res);
+    if (!context) return;
+
+    // Delete sirf OWNER kar sakta hai
+    if (context.role !== 'OWNER') {
+      return res.status(403).json({ success: false, msg: 'Only Owner can delete this project' });
     }
-    await project.remove();
-    res.status(200).json({ success: true, msg: "Project deleted successfully" });
+
+    await Project.deleteOne({ _id: context.project._id });
+    res.status(200).json({ success: true, msg: 'Project deleted successfully' });
   } catch (error) {
-    console.error("DeleteProject error:", error);
-    res.status(500).json({ success: false, msg: "Internal server error" });
+    console.error('DeleteProject error:', error);
+    res.status(500).json({ success: false, msg: 'Internal server error' });
   }
 };
-
-
 
 // Add Member (Only Owner)
 export const addMember = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id);
-    if (!project) return res.status(404).json({ msg: "Project nahi mila" });
+    const { userId, role } = req.body;
 
-    // Only Owner can add members
-    if (project.ownerId.toString() !== req.user.id) {
-      return res.status(403).json({ msg: "Only Owner can add members" });
+    if (!userId) {
+      return res.status(400).json({ success: false, msg: 'userId is required' });
+    }
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, msg: 'Invalid userId' });
+    }
+    const assignRole = role || 'MEMBER';
+    if (!ASSIGNABLE_ROLES.includes(assignRole)) {
+      return res.status(400).json({
+        success: false,
+        msg: `Invalid role. Only ${ASSIGNABLE_ROLES.join(' or ')} can be assigned`,
+      });
     }
 
-    const { userId, role } = req.body; // role = ADMIN or MEMBER
-    const existing = project.members.find(m => m.userId.toString() === userId);
-    if (existing) return res.status(400).json({ msg: "Already a member" });
+    const context = await loadProjectForUser(req, res);
+    if (!context) return;
 
-    project.members.push({ userId, role: role || "MEMBER" });
-    await project.save();
+    // Only Owner can add members
+    if (context.role !== 'OWNER') {
+      return res.status(403).json({ success: false, msg: 'Only Owner can add members' });
+    }
 
-    const updated = await project.populate("members.userId", "name email");
-    res.json({
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, msg: 'User not found' });
+    }
+
+    const existing = context.project.members.find((m) => m.userId.toString() === userId);
+    if (existing) return res.status(400).json({ success: false, msg: 'Already a member' });
+
+    context.project.members.push({ userId, role: assignRole });
+    await context.project.save();
+
+    const updated = await context.project.populate('members.userId', 'name email');
+    res.status(200).json({
       success: true,
-      msg: "Member added successfully",
-      data: updated
+      msg: 'Member added successfully',
+      data: updated,
     });
-
   } catch (err) {
-    console.error("AddMember error:", err);
-    res.status(500).json({ msg: err.message });
+    console.error('AddMember error:', err);
+    res.status(500).json({ success: false, msg: 'Internal server error' });
   }
 };
 
 // Remove Member (Only Owner)
 export const removeMember = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id);
-    if (!project) return res.status(404).json({ msg: "Project nahi mila" });
+    const { userId } = req.params;
 
-    // Only Owner can remove members
-    if (project.ownerId.toString() !== req.user.id) {
-      return res.status(403).json({ msg: "Only Owner can remove members" });
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, msg: 'Invalid userId' });
     }
 
-    // Prevent Owner from removing themselves
-    if (req.params.userId === project.ownerId.toString()) {
-      return res.status(400).json({ msg: "Owner cannot remove themselves" });
+    const context = await loadProjectForUser(req, res);
+    if (!context) return;
+
+    if (context.role !== 'OWNER') {
+      return res.status(403).json({ success: false, msg: 'Only Owner can remove members' });
     }
 
-    project.members = project.members.filter(
-      m => m.userId.toString() !== req.params.userId
+    if (context.project.ownerId.toString() === userId) {
+      return res.status(400).json({ success: false, msg: 'Owner cannot remove themselves' });
+    }
+
+    const isMember = context.project.members.some((m) => m.userId.toString() === userId);
+    if (!isMember) {
+      return res.status(404).json({ success: false, msg: 'Member not found in this project' });
+    }
+
+    context.project.members = context.project.members.filter((m) => m.userId.toString() !== userId);
+    await context.project.save();
+
+   
+    await Task.updateMany(
+      { projectId: context.project._id, assigneeId: userId },
+      { $set: { assigneeId: null } },
     );
-    await project.save();
 
-    res.json({
+    res.status(200).json({
       success: true,
-      msg: "Member removed successfully"
+      msg: 'Member removed successfully',
     });
-
   } catch (err) {
-    console.error("RemoveMember error:", err);
-    res.status(500).json({ msg: err.message });
+    console.error('RemoveMember error:', err);
+    res.status(500).json({ success: false, msg: 'Internal server error' });
   }
 };
