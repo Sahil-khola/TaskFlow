@@ -39,7 +39,6 @@ export const login = async (req,res) => {
 try {
     const { email, password } = req.body;
 
-    // DB aur bcrypt se pehle hi check — khali field ke saath query mat karo
     if (!email || !password) {
       return res.status(400).json({ success: false, msg: "Email and password are required" });
     }
@@ -59,12 +58,19 @@ try {
     // Generate JWT (7 days)
     const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET,{ expiresIn: "7d" });
 
-    // Send safe user data (exclude password)
+    // Token httpOnly cookie me — JS ise padh nahi sakta, isliye XSS se chori nahi ho sakti
+    res.cookie('token', accessToken, {
+        httpOnly: true,
+        secure: false,            // localhost pe HTTPS nahi hai; production me true karo
+        sameSite: 'Lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    // Token body me nahi bhejte — wahi cookie hai. Sirf safe user data.
     res.status(200).json({
       success: true,
       msg: "Login successful",
       data: {
-        accessToken,
         user: { id: user._id, name: user.name, email: user.email }
       }
     });

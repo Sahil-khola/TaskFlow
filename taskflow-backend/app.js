@@ -7,14 +7,17 @@ import authRoutes from './src/routes/auth.routes.js';
 import projectRoutes from './src/routes/project.routes.js';
 import taskRoutes from './src/routes/task.routes.js';
 import connectDB from './src/config/db.js';
+import cookieParser from 'cookie-parser'
 
 const app = express();
+
+app.use(cookieParser());
 
 // Middlewares
 app.use(express.json());
 app.use(cors({ 
   origin: process.env.FRONTEND_URL,
-  credentials: true // <-- cookie ke liye jaruri hai
+  credentials: true 
 }));
 
 // Routes
