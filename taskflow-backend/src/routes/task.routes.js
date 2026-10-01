@@ -1,0 +1,10 @@
+import express from 'express';
+import auth from '../middleware/auth.js';
+import { createTask, getTasks, moveTask, addComment, getComments } from '../controllers/task.controller.js';
+const router = express.Router();
+router.post('/', auth, createTask);
+router.get('/project/:projectId', auth, getTasks);
+router.patch('/:id/move', auth, moveTask);
+router.post('/:id/comments', auth, addComment);
+router.get('/:id/comments', auth, getComments);
+export default router;
