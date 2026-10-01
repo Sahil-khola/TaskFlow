@@ -4,10 +4,12 @@ import authRoutes from './routes/auth.routes.js';
 import projectRoutes from './routes/project.routes.js';
 import taskRoutes from './routes/task.routes.js';
 import DB from './config/db.js';
+import helmet from 'helmet';
 
  DB();
 const app = express();
 app.use(express.json());
+app.use(helmet());
 app.use(cors({origin: process.env.FRONTEND_URL}));
 
 app.use('/api/auth', authRoutes);
