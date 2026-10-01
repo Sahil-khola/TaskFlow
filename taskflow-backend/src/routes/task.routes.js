@@ -1,7 +1,6 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
 import { createTask,getTasksByProject, myTasks, moveTask, addComment, getComments } from '../controllers/task.controller.js';
-import { get } from 'mongoose';
 const router = express.Router();
 
 router.get('/my', auth, myTasks);

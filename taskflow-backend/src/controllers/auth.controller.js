@@ -8,13 +8,13 @@ try {
 
     // Validate input
     if (!name || !email || !password) {
-      return res.status(400).json({ msg: "All fields are required" });
+        return res.status(400).json({ msg: "All fields are required" });
     }
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(409).json({ msg: "User already exists" });
+        return res.status(409).json({ msg: "User already exists" });
     }
     
     // Create user
@@ -46,13 +46,13 @@ try {
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ success: false, msg: "Invalid email or password" });
+        return res.status(401).json({ success: false, msg: "Invalid email or password" });
     }
 
     // Compare password
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
-      return res.status(401).json({ success: false, msg: "Invalid password" });
+        return res.status(401).json({ success: false, msg: "Invalid password" });
     }
 
     // Generate JWT (7 days)

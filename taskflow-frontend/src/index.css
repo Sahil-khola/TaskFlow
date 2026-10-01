@@ -1,2 +1,551 @@
 @import "tailwindcss";
-body{ background:#f7f7fb }
+
+/* ==========================================================================
+   TaskFlow — "Vibrant glass" design tokens
+   Tailwind v4 is CSS-first, so everything lives here instead of a config file.
+   ========================================================================== */
+@theme {
+  /* Typography — Plus Jakarta Sans for display, Inter for UI/body */
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+
+  /* Ink + muted */
+  --color-ink-900: #1e1b4b;
+  --color-ink-700: #3730a3;
+  --color-ink-500: #6b7280;
+  --color-ink-300: #9ca3af;
+
+  /* Aurora blobs */
+  --color-aurora-indigo: #6366f1;
+  --color-aurora-violet: #a855f7;
+  --color-aurora-cyan: #06b6d4;
+  --color-aurora-fuchsia: #d946ef;
+
+  /* Brand gradient */
+  --color-brand-500: #4f46e5;
+  --color-brand-600: #7c3aed;
+
+  /* Kanban column accents */
+  --color-todo: #f59e0b;
+  --color-todo-soft: #fef3c7;
+  --color-doing: #0891b2;
+  --color-doing-soft: #cffafe;
+  --color-done: #059669;
+  --color-done-soft: #d1fae5;
+
+  /* Priority + status */
+  --color-prio-high: #e11d48;
+  --color-prio-medium: #d97706;
+  --color-prio-low: #64748b;
+  --color-alert: #e11d48;
+  --color-alert-soft: #ffe4e6;
+
+  /* Reusable animations (generate `animate-*` utilities) */
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.5s ease-out both;
+  --animate-scale-in: scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-drift-a: drift-a 26s ease-in-out infinite;
+  --animate-drift-b: drift-b 32s ease-in-out infinite;
+  --animate-drift-c: drift-c 38s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.4s linear infinite;
+  --animate-pulse-soft: pulse-soft 2.6s ease-in-out infinite;
+  --animate-glow-pulse: glow-pulse 3.2s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 18px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes drift-a {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    33% {
+      transform: translate3d(6%, -8%, 0) scale(1.12);
+    }
+    66% {
+      transform: translate3d(-7%, 5%, 0) scale(0.94);
+    }
+  }
+  @keyframes drift-b {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    40% {
+      transform: translate3d(-9%, 7%, 0) scale(1.16);
+    }
+    75% {
+      transform: translate3d(5%, -6%, 0) scale(0.92);
+    }
+  }
+  @keyframes drift-c {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(8%, 9%, 0) scale(1.1);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.9;
+      transform: scale(1.06);
+    }
+  }
+}
+
+/* ==========================================================================
+   Base — aurora wash, drifting blobs, subtle grain
+   ========================================================================== */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    color: var(--color-ink-900);
+    background-color: #f6f4ff;
+    background-image: linear-gradient(160deg, #f5f3ff 0%, #f0f7ff 45%, #ecfeff 100%);
+    background-attachment: fixed;
+  }
+
+  /* Layer 1 + 2 of the aurora: two big blurred colour fields that drift */
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: -30vmax;
+    z-index: -2;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  body::before {
+    background:
+      radial-gradient(
+        38vmax 38vmax at 22% 24%,
+        rgba(99, 102, 241, 0.55),
+        transparent 62%
+      ),
+      radial-gradient(
+        32vmax 32vmax at 78% 18%,
+        rgba(217, 70, 239, 0.45),
+        transparent 64%
+      ),
+      radial-gradient(
+        34vmax 34vmax at 62% 82%,
+        rgba(6, 182, 212, 0.42),
+        transparent 64%
+      );
+    filter: blur(30px);
+    animation: drift-a 26s ease-in-out infinite;
+  }
+
+  body::after {
+    background:
+      radial-gradient(
+        28vmax 28vmax at 12% 78%,
+        rgba(168, 85, 247, 0.4),
+        transparent 62%
+      ),
+      radial-gradient(
+        30vmax 30vmax at 88% 68%,
+        rgba(99, 102, 241, 0.36),
+        transparent 64%
+      );
+    filter: blur(40px);
+    animation: drift-b 32s ease-in-out infinite;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Visible, coloured focus for keyboard users everywhere */
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  ::selection {
+    background: rgba(124, 58, 237, 0.22);
+  }
+}
+
+/* ==========================================================================
+   Components — glass surfaces, gradient fills, controls
+   ========================================================================== */
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.7) inset,
+      0 10px 30px -12px rgba(30, 27, 75, 0.18);
+  }
+
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.85);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.85) inset,
+      0 24px 60px -24px rgba(79, 70, 229, 0.4);
+  }
+
+  /* Frosted panel that carries a soft coloured shadow on hover */
+  .lift {
+    transition:
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.28s ease;
+    will-change: transform;
+  }
+
+  .lift:hover {
+    transform: translate3d(0, -4px, 0);
+  }
+
+  .glow-indigo:hover {
+    box-shadow: 0 22px 45px -20px rgba(79, 70, 229, 0.75);
+  }
+  .glow-cyan:hover {
+    box-shadow: 0 22px 45px -20px rgba(8, 145, 178, 0.7);
+  }
+  .glow-emerald:hover {
+    box-shadow: 0 22px 45px -20px rgba(5, 150, 105, 0.7);
+  }
+  .glow-amber:hover {
+    box-shadow: 0 22px 45px -20px rgba(245, 158, 11, 0.75);
+  }
+  .glow-violet:hover {
+    box-shadow: 0 22px 45px -20px rgba(168, 85, 247, 0.7);
+  }
+  .glow-rose:hover {
+    box-shadow: 0 22px 45px -20px rgba(225, 29, 72, 0.65);
+  }
+
+  .btn-gradient {
+    background-image: linear-gradient(
+      120deg,
+      var(--color-brand-500),
+      var(--color-brand-600)
+    );
+    color: #fff;
+    box-shadow: 0 14px 30px -14px rgba(79, 70, 229, 0.9);
+    transition:
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.22s ease,
+      filter 0.22s ease;
+  }
+
+  .btn-gradient:hover:not(:disabled) {
+    transform: translate3d(0, -2px, 0);
+    box-shadow: 0 22px 42px -16px rgba(124, 58, 237, 0.95);
+    filter: saturate(115%);
+  }
+
+  .btn-gradient:active:not(:disabled) {
+    transform: translate3d(0, 0, 0) scale(0.985);
+  }
+
+  .btn-gradient:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Soft outlined button that fills with the brand gradient on hover */
+  .btn-outline {
+    border: 1px solid rgba(79, 70, 229, 0.35);
+    color: var(--color-brand-500);
+    background: rgba(255, 255, 255, 0.55);
+    transition:
+      color 0.24s ease,
+      background-image 0.24s ease,
+      border-color 0.24s ease,
+      box-shadow 0.24s ease,
+      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    color: #fff;
+    border-color: transparent;
+    background-image: linear-gradient(
+      120deg,
+      var(--color-brand-500),
+      var(--color-brand-600)
+    );
+    box-shadow: 0 14px 28px -14px rgba(79, 70, 229, 0.85);
+    transform: translate3d(0, -2px, 0);
+  }
+
+  .btn-outline:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .gradient-text {
+    background-image: linear-gradient(
+      100deg,
+      var(--color-brand-500) 0%,
+      #a855f7 45%,
+      var(--color-aurora-cyan) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Form controls */
+  .field {
+    width: 100%;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(30, 27, 75, 0.1);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.65rem 0.9rem;
+    font-size: 0.9rem;
+    color: var(--color-ink-900);
+    transition:
+      border-color 0.22s ease,
+      box-shadow 0.22s ease,
+      background-color 0.22s ease;
+  }
+
+  .field::placeholder {
+    color: var(--color-ink-300);
+  }
+
+  .field:hover {
+    border-color: rgba(124, 58, 237, 0.28);
+  }
+
+  .field:focus,
+  .field:focus-visible {
+    outline: none;
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(124, 58, 237, 0.65);
+    box-shadow:
+      0 0 0 4px rgba(124, 58, 237, 0.16),
+      0 10px 24px -14px rgba(124, 58, 237, 0.7);
+  }
+
+  select.field {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, #6b7280 50%),
+      linear-gradient(135deg, #6b7280 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) calc(50% + 2px),
+      calc(100% - 13px) calc(50% + 2px);
+    background-size:
+      5px 5px,
+      5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 2.25rem;
+  }
+
+  /* Chips / pills */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .btn-chip {
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    transition:
+      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.2s ease,
+      background-color 0.2s ease;
+  }
+
+  .btn-chip:hover:not(:disabled) {
+    transform: translate3d(0, -1px, 0);
+  }
+
+  .btn-chip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Skeleton blocks with a travelling sheen */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.85rem;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.85),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: shimmer 2.4s linear infinite;
+  }
+
+  .alert-rose {
+    background: rgba(255, 228, 230, 0.75);
+    border: 1px solid rgba(225, 29, 72, 0.3);
+    color: #9f1239;
+  }
+
+  /* Thin scrollbar for the Kanban columns */
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 58, 237, 0.35) transparent;
+  }
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.3);
+    border-radius: 999px;
+  }
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer utilities {
+  /* Staggered entrance helper: apply .stagger to a parent, children fade up */
+  .stagger > * {
+    animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .stagger > *:nth-child(1) {
+    animation-delay: 0.04s;
+  }
+  .stagger > *:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: 0.16s;
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: 0.22s;
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: 0.28s;
+  }
+  .stagger > *:nth-child(6) {
+    animation-delay: 0.34s;
+  }
+  .stagger > *:nth-child(n + 7) {
+    animation-delay: 0.4s;
+  }
+
+  .drag-lift {
+    transform: rotate(2.5deg) scale(1.03);
+    box-shadow: 0 30px 60px -18px rgba(30, 27, 75, 0.55);
+  }
+}
+
+/* ==========================================================================
+   Reduced motion — keep the layout, drop the movement
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  body::before,
+  body::after {
+    animation: none !important;
+  }
+
+  .lift:hover,
+  .btn-gradient:hover:not(:disabled),
+  .btn-outline:hover:not(:disabled) {
+    transform: none;
+  }
+}
