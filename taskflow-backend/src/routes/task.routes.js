@@ -1,9 +1,12 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
-import { createTask, getTasks, moveTask, addComment, getComments } from '../controllers/task.controller.js';
+import { createTask,getTasksByProject, myTasks, moveTask, addComment, getComments } from '../controllers/task.controller.js';
+import { get } from 'mongoose';
 const router = express.Router();
+
+router.get('/my', auth, myTasks);
 router.post('/', auth, createTask);
-router.get('/project/:projectId', auth, getTasks);
+router.get('/project/:projectId', auth,getTasksByProject);
 router.patch('/:id/move', auth, moveTask);
 router.post('/:id/comments', auth, addComment);
 router.get('/:id/comments', auth, getComments);
