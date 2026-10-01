@@ -115,3 +115,68 @@ export const deleteProject = async (req, res) => {
     res.status(500).json({ success: false, msg: "Internal server error" });
   }
 };
+
+
+
+// Add Member (Only Owner)
+export const addMember = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ msg: "Project nahi mila" });
+
+    // Only Owner can add members
+    if (project.ownerId.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "Only Owner can add members" });
+    }
+
+    const { userId, role } = req.body; // role = ADMIN or MEMBER
+    const existing = project.members.find(m => m.userId.toString() === userId);
+    if (existing) return res.status(400).json({ msg: "Already a member" });
+
+    project.members.push({ userId, role: role || "MEMBER" });
+    await project.save();
+
+    const updated = await project.populate("members.userId", "name email");
+    res.json({
+      success: true,
+      msg: "Member added successfully",
+      data: updated
+    });
+
+  } catch (err) {
+    console.error("AddMember error:", err);
+    res.status(500).json({ msg: err.message });
+  }
+};
+
+// Remove Member (Only Owner)
+export const removeMember = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ msg: "Project nahi mila" });
+
+    // Only Owner can remove members
+    if (project.ownerId.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "Only Owner can remove members" });
+    }
+
+    // Prevent Owner from removing themselves
+    if (req.params.userId === project.ownerId.toString()) {
+      return res.status(400).json({ msg: "Owner cannot remove themselves" });
+    }
+
+    project.members = project.members.filter(
+      m => m.userId.toString() !== req.params.userId
+    );
+    await project.save();
+
+    res.json({
+      success: true,
+      msg: "Member removed successfully"
+    });
+
+  } catch (err) {
+    console.error("RemoveMember error:", err);
+    res.status(500).json({ msg: err.message });
+  }
+};
