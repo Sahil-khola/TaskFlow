@@ -21,7 +21,6 @@ import api from '../api/api.js'
 import { AuthContext } from '../context/AuthContext.jsx'
 import EmptyState from '../component/EmptyState.jsx'
 import AddMember from '../component/AddMember.jsx'
-import EditProject from '../component/EditProject.jsx'
 import {
   STATUSES,
   avatarGradient,
@@ -453,25 +452,39 @@ export default function ProjectDetails() {
           <span className="transition-transform duration-300 group-hover:-translate-x-0.5">←</span> Projects
         </Link>
 
-        <header className="mt-2 mb-6 flex flex-wrap items-start justify-between gap-3 animate-fade-up">
-          <div className="min-w-0">
-            <h1 className="font-display text-3xl font-extrabold tracking-tight gradient-text sm:text-4xl">
-              {project?.name}
-            </h1>
-            {project?.description && (
-              <p className="mt-1.5 max-w-2xl text-sm text-ink-500">{project.description}</p>
+        {/* Vertical stack: title -> description -> role pill + Edit button.
+            Pehle controls title ke saath ek hi row me the. */}
+        <header className="animate-fade-up mt-2 mb-6">
+          <h1 className="gradient-text font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+            {project?.name}
+          </h1>
+
+          {/* Description hamesha render — khaali ho to placeholder.
+              Warna khaali description se poora <p> element gayab ho jata tha. */}
+          <p className="mt-1.5 max-w-2xl text-sm text-ink-500">
+            {project?.description ? (
+              project.description
+            ) : (
+              <span className="italic text-ink-300">No description added yet</span>
             )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+          </p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <span
               className="chip px-2.5 py-1"
               style={{ color: rolePill.text, background: rolePill.bg, border: `1px solid ${rolePill.border}` }}
             >
               {rolePill.label}
             </span>
-            {/* Backend `updateProject` bhi sirf OWNER/ADMIN ko allow karta hai */}
+            {/* Backend `updateProject` bhi sirf OWNER/ADMIN ko allow karta hai.
+                Editing ab dedicated /updateProject page par hoti hai, modal nahi. */}
             {(role === 'OWNER' || role === 'ADMIN') && (
-              <EditProject project={project} onSaved={() => load({ silent: true })} />
+              <Link
+                to={`/updateProject/${project._id}`}
+                className="btn-chip border border-ink-900/12 px-3.5 py-1.5 text-sm font-semibold text-ink-500 transition hover:border-brand-500/40 hover:text-brand-600"
+              >
+                Edit project
+              </Link>
             )}
           </div>
         </header>
