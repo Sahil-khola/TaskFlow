@@ -1,0 +1,22 @@
+{
+  "name": "taskflow",
+  "private": true,
+  "version": "1.0.0",
+  "description": "TaskFlow — project task manager. React (Vite) frontend + Express/MongoDB backend.",
+  "scripts": {
+    "setup": "npm --prefix taskflow-backend install && npm --prefix taskflow-frontend install",
+    "dev": "concurrently -k -n backend,frontend -c blue,magenta \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm --prefix taskflow-backend run dev",
+    "dev:frontend": "npm --prefix taskflow-frontend run dev",
+    "seed": "npm --prefix taskflow-backend run seed",
+    "build": "npm --prefix taskflow-frontend run build",
+    "lint": "npm --prefix taskflow-frontend run lint",
+    "start": "npm --prefix taskflow-backend start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

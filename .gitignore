@@ -1,0 +1,21 @@
+# Root orchestrator dependencies (concurrently)
+node_modules/
+
+# Env files — sirf asli secrets ignore karo.
+# taskflow-backend/.env me JWT_SECRET hai, wo kabhi commit nahi hona chahiye.
+# .env.development / .env.example me sirf public VITE_* values hain, wo commit hote hain.
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

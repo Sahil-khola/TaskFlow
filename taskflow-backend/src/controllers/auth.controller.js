@@ -51,9 +51,13 @@ try {
 
     const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET,{ expiresIn: "7d" });
 
+    // Production me Render HTTPS deta hai, to cookie ka `secure` flag zaroori hai.
+    // Local me `http://localhost` par chal raha hai aur secure cookie browser
+    // reject kar deta hai — isliye NODE_ENV se toggle karte hain.
     res.cookie('token', accessToken, {
         httpOnly: true,
-        secure: false,            
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
