@@ -1,43 +1,26 @@
 import { Routes, Route } from 'react-router-dom'
+import { useContext } from 'react'
 import { Navigate } from 'react-router-dom'
-import Protected from './component/Protected.jsx'
-import Navbar from './component/Navbar.jsx'
-import Footer from './component/Footer.jsx'
+import { AuthContext } from './context/AuthContext.jsx'
 import Login from './pages/Login.jsx'
-import Signup from './pages/SignUp.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Projects from './pages/Projects.jsx'
-import ProjectDetails from './pages/ProjectDetails.jsx'
-import MyTasks from './pages/MyTasks.jsx'
+import Signup from './pages/Signup.jsx'
+import Navbar from './component/Navbar.jsx'
 
-// Har protected page ke upar navbar
-const Layout = ({ children }) => (
-  <div className="min-h-screen flex flex-col">
-    <Navbar />
-    <main className="flex-1">{children}</main>
-    <Footer />
-  </div>
-)
+function Protected({ children }) {
+  const { user, loading } = useContext(AuthContext)
+  if (loading) return <div className="p-10 text-center">Checking auth...</div>
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
 
-const protectedPage = (Page) => (
-  <Protected>
-    <Layout>
-      <Page />
-    </Layout>
-  </Protected>
-)
 
-export default function App() {
+
+export default function App(){
   return <Routes>
-    <Route path="/login" element={<Login />} />
-    <Route path="/signup" element={<Signup />} />
+    <Navbar/>
+    <Route path="/login" element={<Login/>}/>
+    <Route path="/signup" element={<Signup/>}/>
+    <Route path="/" element={<Protected><div>Dashboard</div></Protected>}/>
 
-    <Route path="/" element={protectedPage(Dashboard)} />
-    <Route path="/projects" element={protectedPage(Projects)} />
-    <Route path="/projects/:id" element={protectedPage(ProjectDetails)} />
-    <Route path="/my-tasks" element={protectedPage(MyTasks)} />
-
-    {/* Abhi bana nahi hua page */}
-    <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 }
