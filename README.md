@@ -11,6 +11,7 @@ a Kanban board, and manage who can do what.
 ## Table of contents
 
 - [Features](#features)
+- [How it works](#how-it-works)
 - [Tech stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
@@ -57,6 +58,143 @@ a Kanban board, and manage who can do what.
 - Personal "My Tasks" view across every project you belong to
 - Dashboard with summary counts and overdue alerts
 - Responsive, accessible UI with a consistent design system
+
+---
+
+## How it works
+
+### The big picture
+
+```
+Browser ──▶ React SPA ──▶ Axios ──▶ Express API ──▶ Mongoose ──▶ MongoDB
+                :5173                   :5001
+```
+
+In development the two servers run separately: Vite on `5173`, Express on
+`5001`, and the browser talks to both.
+
+In production Render hosts **one** service. Express serves the Vite build
+(`taskflow-frontend/dist`) itself, so the SPA and the API share a single
+origin. That removes CORS entirely and lets the session cookie work without
+any cross-site flags.
+
+### Authentication flow
+
+```
+1. POST /api/auth/login  { email, password }
+2. Server verifies the bcrypt hash, signs a JWT, and sends it as a cookie
+       res.cookie('token', jwt, {
+         httpOnly: true,                          // JS cannot read it
+         secure:   NODE_ENV === 'production',    // HTTPS only in production
+         sameSite: 'lax',
+       })
+3. Every later request carries that cookie automatically
+       (the Axios instance sets withCredentials: true)
+4. auth middleware verifies the JWT and sets req.user
+5. No token, or an invalid one → 401
+6. The Axios interceptor catches that 401 and redirects to /login
+```
+
+Nothing is ever written to `localStorage` or `sessionStorage`. The practical
+benefit is that an XSS bug cannot exfiltrate the session, because page
+JavaScript cannot read an httpOnly cookie.
+
+On page load `AuthContext` calls `GET /api/auth/me` to restore the session from
+the cookie. While that check is in flight, `Protected` shows a branded loader
+instead of flashing the login page.
+
+> The auth middleware also accepts an `Authorization: Bearer` header as a
+> fallback, so Postman and `curl` work. The browser never uses that path.
+
+### Route protection
+
+Every route except `/login` and `/signup` is wrapped in `<Protected>`:
+
+```jsx
+if (loading) return <BrandLoader />       // still checking the session
+if (!user)   return <Navigate to="/login" replace />
+return children
+```
+
+`Navbar` and `Footer` live *inside* that guard, so they never render for a
+signed-out visitor.
+
+This is a UX convenience only. **Real authorisation lives on the server** —
+every controller re-checks membership and role. Hiding a button does not
+protect the endpoint.
+
+### Task drag-and-drop
+
+This is the most involved flow in the app.
+
+**While dragging** — `handleDragOver` runs on every pointer move. The moment
+the card crosses into another column, local state is updated so the card
+visually moves immediately. This is an optimistic update: the UI never waits
+for the server. A ref (`tasksRef`) is used to read the latest state, because
+`dragOver` fires many times per render cycle and a closure would go stale.
+
+**On drop** — `handleDragEnd` works out the destination column and index, then:
+
+```
+PATCH /api/tasks/:id/move  { status, position }
+```
+
+**On the server** (`moveTask` in `task.controller.js`):
+
+1. Validate the status is one of `TODO` / `IN_PROGRESS` / `DONE`
+2. Validate `position` is a number `>= 0`
+3. Check permission — Owner or Admin, or the task's own assignee
+4. Set the new status, and stamp `completedAt` when it becomes `DONE`
+5. Fetch every sibling in the destination column, sorted by position
+6. Remove the moved task, splice it back in at the requested index
+7. `bulkWrite` fresh `position: 0, 1, 2…` values onto the whole column
+
+Step 7 is the important one. Renumbering the entire column — rather than
+patching only the dragged card — is what keeps the ordering consistent no
+matter where the card was dropped.
+
+### Why `position` is scoped to a column
+
+`position` starts at 0, but it orders tasks **within a single status**, not
+across the whole project:
+
+```
+TaskFlow Website
+  TODO         → position 0, 1, 2
+  IN_PROGRESS  → position 0, 1
+  DONE         → position 0
+```
+
+So dropping a card at the top of In Progress sends `position: 0`, and the card
+lands correctly among the In Progress tasks. With a single shared counter,
+moving a card between columns would scramble the order.
+
+### Adding a member
+
+```
+1. Owner types an email (minimum 3 characters)
+2. GET /api/auth/users?email=…      ← search, returns at most 10 users
+3. Owner picks a result and chooses a role (Member or Admin)
+4. POST /api/projects/:id/members   { userId, role }
+5. The user is pushed into project.members
+```
+
+The search endpoint escapes regex metacharacters before building the query, so
+a search like `.*` returns nothing rather than matching every user. It only
+ever selects `_id`, `name` and `email` — never password hashes.
+
+The frontend also filters out anyone who is already a member, so the results
+list only contains people who can actually be added.
+
+### Project editing
+
+Editing happens on a dedicated `/updateProject` route, not in a modal:
+
+- `/updateProject` lists the user's projects to pick from
+- `/updateProject/:id` opens one project directly
+
+Only Owners and Admins see the link, and both are re-checked on the server.
+A Member visiting the URL directly sees the form disabled with an explanation.
 
 ---
 

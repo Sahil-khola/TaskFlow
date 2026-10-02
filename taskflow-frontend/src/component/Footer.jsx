@@ -1,87 +1,134 @@
-// Glass footer — matches the aurora design system in src/index.css.
-// Note: lucide-react v1 dropped all brand icons (Facebook/Twitter/Linkedin),
-// so only generic icons from the library are used here.
-import { Rocket, Server, Atom, Database, LayoutDashboard, FolderKanban, ListTodo } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
-const STACK = [
-  { href: 'https://react.dev', label: 'React', Icon: Atom },
-  { href: 'https://expressjs.com', label: 'Express', Icon: Server },
-  { href: 'https://www.mongodb.com', label: 'MongoDB', Icon: Database },
+// Andar ke links react-router ke Link se — page reload nahi hota.
+// Bahar ke links normal <a> se with target="_blank", taaki naya tab khule.
+const internal = [
+  { to: '/', label: 'Dashboard', glyph: '◧' },
+  { to: '/projects', label: 'Projects', glyph: '▤' },
+  { to: '/my-tasks', label: 'My Tasks', glyph: '✓' },
+  { to: '/updateProject', label: 'Update project', glyph: '✎' },
 ]
 
-const PAGES = [
-  { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
-  { to: '/projects', label: 'Projects', Icon: FolderKanban },
-  { to: '/my-tasks', label: 'My Tasks', Icon: ListTodo },
+const external = [
+  { href: 'https://react.dev', label: 'React', note: 'UI library' },
+  { href: 'https://vite.dev', label: 'Vite', note: 'Build tool' },
+  { href: 'https://tailwindcss.com', label: 'Tailwind CSS', note: 'Styling' },
+  { href: 'https://expressjs.com', label: 'Express', note: 'API server' },
+  { href: 'https://www.mongodb.com', label: 'MongoDB', note: 'Database' },
 ]
 
 export default function Footer() {
   return (
-    <footer className="glass mt-10 border-t border-white/50">
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+    <footer className="mt-auto">
+      {/* Aurora line — upar wala border page ke gradient se match karta hai */}
+      <div
+        className="h-px w-full"
+        style={{
+          backgroundImage:
+            'linear-gradient(90deg,transparent,#6366F1,#A855F7,#06B6D4,transparent)',
+        }}
+        aria-hidden="true"
+      />
+
+      <div className="glass rounded-none border-x-0 border-b-0">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-11 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="lg:col-span-2 sm:col-span-2">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2.5 font-display text-xl font-extrabold tracking-tight"
+            >
               <span
-                className="grid h-9 w-9 place-items-center rounded-xl text-white shadow-[0_10px_24px_-12px_rgba(79,70,229,0.9)]"
-                style={{ background: 'linear-gradient(135deg,#6366F1,#A855F7)' }}
+                className="grid h-9 w-9 place-items-center rounded-xl text-sm font-bold text-white"
+                style={{ backgroundImage: 'linear-gradient(135deg,#6366F1,#D946EF)' }}
+                aria-hidden="true"
               >
-                <Rocket size={17} aria-hidden="true" />
+                TF
               </span>
-              <span className="gradient-text font-display text-lg font-extrabold tracking-tight">
-                TaskFlow
-              </span>
-            </div>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink-500">
-              Project boards, tasks and team members in one place. Plan it, track it, ship it.
+              <span className="gradient-text">TaskFlow</span>
+            </Link>
+
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-500">
+              A collaborative project task manager. Create projects, organise
+              work on a Kanban board, and control who can do what with role-based
+              access.
             </p>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="chip bg-todo-soft text-[#92400E]">JWT · httpOnly cookie</span>
+              <span className="chip bg-done-soft text-[#047857]">Role-based access</span>
+            </div>
           </div>
 
-          {/* Pages — sirf wahi routes jo actually exist karte hain */}
-          <nav aria-label="Footer">
-            <h2 className="font-display text-sm font-bold text-ink-900">Go to</h2>
-            <ul className="mt-3 grid gap-2">
-              {PAGES.map(({ to, label, Icon }) => (
-                <li key={to}>
-                  <a
-                    href={to}
-                    className="group inline-flex items-center gap-2 text-sm text-ink-500 transition hover:text-brand-500"
+          {/* Andar ke pages */}
+          <nav aria-labelledby="footer-go">
+            <h2
+              id="footer-go"
+              className="font-display text-xs font-bold uppercase tracking-widest text-ink-500"
+            >
+              Go to
+            </h2>
+            <ul className="mt-4 grid gap-1">
+              {internal.map(l => (
+                <li key={l.to}>
+                  <Link
+                    to={l.to}
+                    className="group inline-flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm font-medium text-ink-500 transition hover:bg-white/70 hover:text-brand-600"
                   >
-                    <Icon size={15} className="text-ink-300 transition group-hover:text-brand-500" aria-hidden="true" />
-                    {label}
-                  </a>
+                    <span className="w-4 text-center opacity-70" aria-hidden="true">
+                      {l.glyph}
+                    </span>
+                    {l.label}
+                    <span
+                      className="opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100"
+                      aria-hidden="true"
+                    >
+                      →
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>
           </nav>
 
-          {/* Built with */}
+          {/* Bahar ke links — naye tab me khulte hain */}
           <div>
-            <h2 className="font-display text-sm font-bold text-ink-900">Built with</h2>
-            <ul className="mt-3 grid gap-2">
-              {STACK.map(({ href, label, Icon }) => (
-                <li key={label}>
+            <h2 className="font-display text-xs font-bold uppercase tracking-widest text-ink-500">
+              Built with
+            </h2>
+            <ul className="mt-4 grid gap-1">
+              {external.map(l => (
+                <li key={l.href}>
                   <a
-                    href={href}
+                    href={l.href}
                     target="_blank"
-                    rel="noreferrer"
-                    className="group inline-flex items-center gap-2 text-sm text-ink-500 transition hover:text-brand-500"
+                    rel="noopener noreferrer"
+                    className="group inline-flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm font-medium text-ink-500 transition hover:bg-white/70 hover:text-brand-600"
                   >
-                    <Icon size={15} className="text-ink-300 transition group-hover:text-brand-500" aria-hidden="true" />
-                    {label}
+                    <span className="min-w-0 flex-1 truncate">{l.label}</span>
+                    <span className="text-[11px] text-ink-300">{l.note}</span>
+                    <span
+                      className="opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100"
+                      aria-hidden="true"
+                    >
+                      ↗
+                    </span>
                   </a>
                 </li>
               ))}
             </ul>
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto max-w-6xl border-t border-white/50 px-4 py-4">
-        <p className="text-center text-xs text-ink-500">
-          © {new Date().getFullYear()} TaskFlow — Project &amp; Task Manager
-        </p>
+        {/* Bottom bar */}
+        <div className="border-t border-white/60">
+          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-ink-500 sm:flex-row">
+            <p>© {new Date().getFullYear()} TaskFlow. All rights reserved.</p>
+            <p className="tnum">
+              React · Express · MongoDB — session secured with an httpOnly cookie
+            </p>
+          </div>
+        </div>
       </div>
     </footer>
   )
