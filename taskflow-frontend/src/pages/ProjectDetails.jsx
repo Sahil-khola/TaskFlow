@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from 'react'
+import { useState, useEffect, useContext, useCallback, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   DndContext,
@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities'
 import api from '../api/api.js'
 import { AuthContext } from '../context/AuthContext.jsx'
 import EmptyState from '../component/EmptyState.jsx'
+import AddMember from '../component/AddMember.jsx'
 import {
   STATUSES,
   avatarGradient,
@@ -484,6 +485,16 @@ export default function ProjectDetails() {
             Members
             <span className="ml-2 text-sm font-semibold tnum text-ink-300">{members.length}</span>
           </h2>
+
+          {/* Sirf Owner hi member add kar sakta hai — backend bhi yehi enforce karta hai */}
+          {role === 'OWNER' && (
+            <AddMember
+              projectId={id}
+              members={members}
+              onAdded={() => load({ silent: true })}
+            />
+          )}
+
           <div className="glass grid gap-2 rounded-2xl p-2 sm:grid-cols-2">
             {members.map(m => {
               const r = roleMeta(m.role)

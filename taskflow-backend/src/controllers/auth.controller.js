@@ -106,3 +106,35 @@ export const getMe = async (req,res) => {
     res.status(500).json({ success: false, msg: "Internal server error" });
   }
 };
+
+// regex me daalte hain to special characters escape karne zaroori hain,
+// warna "?email=.*" se saare users aa jayenge
+const escapeRegex = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Project me member add karne ke liye email se user lookup
+export const searchUsers = async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    // Chhota query mat lo — "a" se almost saare users match ho jayenge
+    if (!email || String(email).trim().length < 3) {
+      return res.status(400).json({ success: false, msg: "Enter at least 3 characters to search" });
+    }
+
+    // Sirf id, name aur email bhejo — password ya timestamps ka koi kaam nahi yahan
+    const users = await User.find({
+      email: { $regex: escapeRegex(String(email).trim()), $options: "i" },
+    })
+      .select("_id name email")
+      .limit(10);
+
+    res.status(200).json({
+      success: true,
+      msg: "Users fetched successfully",
+      data: users,
+    });
+  } catch (error) {
+    console.error("SearchUsers error:", error);
+    res.status(500).json({ success: false, msg: "Internal server error" });
+  }
+};
