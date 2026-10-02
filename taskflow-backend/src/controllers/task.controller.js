@@ -3,14 +3,11 @@ import Comment from "../models/Comment.js";
 import Project from "../models/Project.js";
 import mongoose from "mongoose";
 
-// Model schema me jo enums hain, validation ke liye yahin dobara rakh rahe hain
 const STATUSES = ["TODO", "IN_PROGRESS", "DONE"];
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH"];
 
 const isManager = (role) => role === "OWNER" || role === "ADMIN";
 
-// Project load karta hai aur check karta hai ki user member hai ya nahi.
-// Response bhej deta hai aur null return karta hai — isliye caller ko `if (!project) return;`
 const loadProjectForUser = async (req, res, projectId) => {
   if (!mongoose.isValidObjectId(projectId)) {
     res.status(400).json({ success: false, msg: "Invalid project id" });
@@ -32,7 +29,6 @@ const loadProjectForUser = async (req, res, projectId) => {
   return { project, role: member.role };
 };
 
-// Task load + uske project ki membership check (task id se project pata chal jaata hai)
 const loadTaskForUser = async (req, res, taskId) => {
   if (!mongoose.isValidObjectId(taskId)) {
     res.status(400).json({ success: false, msg: "Invalid task id" });
@@ -51,8 +47,6 @@ const loadTaskForUser = async (req, res, taskId) => {
   return { task, project: context.project, role: context.role };
 };
 
-// search ko regex me daalte hain to user ke special characters escape karne zaroori hain,
-// warna "?search=.*" se sab match ho jayega
 const escapeRegex = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const createTask = async (req, res) => {
@@ -70,11 +64,9 @@ export const createTask = async (req, res) => {
       return res.status(400).json({ success: false, msg: `Invalid status. Use ${STATUSES.join(", ")}` });
     }
 
-    // Project hona chahiye aur caller uska member hona chahiye
     const context = await loadProjectForUser(req, res, projectId);
     if (!context) return;
 
-    // Assignee bhi project ka member hona chahiye
     if (assigneeId) {
       if (!mongoose.isValidObjectId(assigneeId)) {
         return res.status(400).json({ success: false, msg: "Invalid assigneeId" });
@@ -87,7 +79,6 @@ export const createTask = async (req, res) => {
 
     const taskStatus = status || "TODO";
 
-    // Position column ke andar hona chahiye, isliye usi status ke tasks count karo
     const count = await Task.countDocuments({ projectId, status: taskStatus });
 
     const task = await Task.create({
@@ -115,11 +106,9 @@ export const createTask = async (req, res) => {
 
 export const getTasksByProject = async (req, res) => {
   try {
-    // Route /project/:projectId hai, isliye params.projectId (params.id undefined hota tha)
     const { projectId } = req.params;
     const { status, priority, assigneeId, search } = req.query;
 
-    // Membership check — warna koi bhi kisi bhi project ke tasks dekh lega
     const context = await loadProjectForUser(req, res, projectId);
     if (!context) return;
 
@@ -143,7 +132,6 @@ export const getTasksByProject = async (req, res) => {
       else return res.status(400).json({ success: false, msg: "Invalid assigneeId" });
     }
     if (search) {
-      // case-insensitive title search
       filter.title = { $regex: escapeRegex(search), $options: "i" };
     }
 
@@ -166,12 +154,10 @@ export const moveTask = async (req, res) => {
   try {
     const { status, position } = req.body;
 
-    // Task + uske project ki membership check
     const context = await loadTaskForUser(req, res, req.params.id);
     if (!context) return;
     const { task, role } = context;
 
-    // Drag/drop se badi validation: status aur position dono check karo
     if (!STATUSES.includes(status)) {
       return res.status(400).json({ success: false, msg: `Invalid status. Use ${STATUSES.join(", ")}` });
     }
@@ -179,7 +165,6 @@ export const moveTask = async (req, res) => {
       return res.status(400).json({ success: false, msg: "position must be a number >= 0" });
     }
 
-    // Member sirf apna assigned task hi move kar sakta hai
     const isOwnTask = task.assigneeId && task.assigneeId.toString() === req.user.id;
     if (!isManager(role) && !isOwnTask) {
       return res.status(403).json({ success: false, msg: "You can only move tasks assigned to you" });
@@ -189,7 +174,6 @@ export const moveTask = async (req, res) => {
     task.completedAt = status === "DONE" ? task.completedAt || new Date() : null;
     await task.save();
 
-    // Destination column ke positions ko 0,1,2... bana do taaki reorder me gap na bane
     const siblings = await Task.find({ projectId: task.projectId, status }).sort({ position: 1, createdAt: 1 }).select("_id");
     const ids = siblings
       .map((t) => t._id.toString())
@@ -218,7 +202,6 @@ export const moveTask = async (req, res) => {
 
 export const myTasks = async (req, res) => {
   try {
-    // Member ke tasks laao — aur un projects ke tasks jinke se user remove ho chuka hai unko chhod do
     const projects = await Project.find({ members: { $elemMatch: { userId: req.user.id } } }).select("_id");
     const projectIds = projects.map((p) => p._id);
 
@@ -250,7 +233,6 @@ export const addComment = async (req, res) => {
       return res.status(400).json({ success: false, msg: "Comment body is required" });
     }
 
-    // Task hona chahiye aur caller us project ka member hona chahiye
     const context = await loadTaskForUser(req, res, req.params.id);
     if (!context) return;
 
