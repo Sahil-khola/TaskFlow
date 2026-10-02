@@ -21,6 +21,7 @@ import api from '../api/api.js'
 import { AuthContext } from '../context/AuthContext.jsx'
 import EmptyState from '../component/EmptyState.jsx'
 import AddMember from '../component/AddMember.jsx'
+import EditProject from '../component/EditProject.jsx'
 import {
   STATUSES,
   avatarGradient,
@@ -461,12 +462,18 @@ export default function ProjectDetails() {
               <p className="mt-1.5 max-w-2xl text-sm text-ink-500">{project.description}</p>
             )}
           </div>
-          <span
-            className="chip shrink-0 px-2.5 py-1"
-            style={{ color: rolePill.text, background: rolePill.bg, border: `1px solid ${rolePill.border}` }}
-          >
-            {rolePill.label}
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              className="chip px-2.5 py-1"
+              style={{ color: rolePill.text, background: rolePill.bg, border: `1px solid ${rolePill.border}` }}
+            >
+              {rolePill.label}
+            </span>
+            {/* Backend `updateProject` bhi sirf OWNER/ADMIN ko allow karta hai */}
+            {(role === 'OWNER' || role === 'ADMIN') && (
+              <EditProject project={project} onSaved={() => load({ silent: true })} />
+            )}
+          </div>
         </header>
 
         {err && (
