@@ -21,6 +21,7 @@ import api from '../api/api.js'
 import { AuthContext } from '../context/AuthContext.jsx'
 import EmptyState from '../component/EmptyState.jsx'
 import AddMember from '../component/AddMember.jsx'
+// import EditProject from '../component/EditProject.jsx'
 import {
   STATUSES,
   avatarGradient,
