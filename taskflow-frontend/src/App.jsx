@@ -38,7 +38,6 @@ export default function App() {
       <Route path="/" element={protectedPage(Dashboard)} />
       <Route path="/projects" element={protectedPage(Projects)} />
       <Route path="/projects/:id" element={protectedPage(ProjectDetails)} />
-      {/* Edit project: /updateProject se project choose karo, ya seedha /updateProject/:id */}
       <Route path="/updateProject" element={protectedPage(UpdateProject)} />
       <Route path="/updateProject/:id" element={protectedPage(UpdateProject)} />
       <Route path="/my-tasks" element={protectedPage(MyTasks)} />
