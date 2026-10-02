@@ -65,11 +65,14 @@ The backend reads `taskflow-backend/.env`:
 
 ```
 PORT=5001
-MONGO_URL=mongodb://localhost:27017/taskflow
+MONGODB_URL=mongodb://localhost:27017/taskflow
 JWT_SECRET=<your secret>
 ```
 
-Note it is `MONGO_URL`, not `MONGO_URI`.
+Note it is `MONGODB_URL`. On MongoDB Atlas the database name must be in the
+URL (`.../taskflow`) — without it Mongoose silently uses the `test` database.
+Render also needs `0.0.0.0/0` under Atlas → Network Access, because Render's
+outbound IPs are dynamic.
 
 ## Layout
 

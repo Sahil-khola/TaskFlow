@@ -5,7 +5,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url'; 
 import authRoutes from './src/routes/auth.routes.js';
 import projectRoutes from './src/routes/project.routes.js';
@@ -50,35 +49,12 @@ app.get('/health', (req, res) => {
 });
 
 
-const distPath = path.resolve(__dirname, '..', 'taskflow-frontend', 'dist');
-
-app.use(
-  express.static(distPath, {
-    index: false,
-    maxAge: isProd ? '1y' : 0,
-    setHeaders: (res, filePath) => {
-      if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache');
-    },
-  })
-);
-
-app.use((req, res) => {
-  if (req.path.startsWith('/api')) {
-    return res.status(404).json({ success: false, msg: 'API route not found' });
-  }
-
-
-  const indexHtml = path.join(distPath, 'index.html');
-  if (fs.existsSync(indexHtml)) {
-    return res.sendFile(indexHtml);
-  }
-
-  res
-    .status(503)
-    .type('text/plain')
-    .send('Frontend build not found. Run the build command so taskflow-frontend/dist exists.');
-});
-
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '..', 'FRONTEND', 'dist')));
+  app.get(/.*/, (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'FRONTEND', 'dist', 'index.html'));
+  });
+}
 const start = async () => {
   try {
     await connectDB();

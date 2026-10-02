@@ -2,8 +2,7 @@ import { useContext } from 'react'
 import { Navigate } from 'react-router-dom'
 import { AuthContext } from '../context/AuthContext.jsx'
 
-// Branded loading state — animated gradient spinner + wordmark,
-// page load pe bare "Loading..." string dikhne se behtar
+
 export function BrandLoader({ label = 'Checking your session…' }) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 animate-fade-in">
