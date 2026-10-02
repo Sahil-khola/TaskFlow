@@ -26,7 +26,7 @@ export function BrandLoader({ label = 'Checking your session…' }) {
           aria-hidden="true"
         />
         <span
-          className="absolute inset-[3px] grid place-items-center rounded-[13px] bg-white/85 backdrop-blur font-display text-sm font-extrabold text-ink-900"
+          className="absolute inset-0.75 grid place-items-center rounded-[13px] bg-white/85 backdrop-blur font-display text-sm font-extrabold text-ink-900"
           aria-hidden="true"
         >
           TF
