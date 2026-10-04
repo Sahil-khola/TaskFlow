@@ -169,10 +169,7 @@ export default function MyTasks() {
             const assignee = t.assigneeId?.name
 
             return (
-              /* min-w-0 + flex-wrap: grid children ka default `min-width: auto`
-                 hota hai, jisse lamba title poori row ko 393px screen se bahar
-                 push kar deta tha. Wrap hone se "Open" button chhoti screen
-                 par agli line par aa jata hai. */
+           
               <li
                 key={t._id}
                 className={`flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2 rounded-xl px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/85 ${
