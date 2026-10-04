@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 
-// Andar ke links react-router ke Link se — page reload nahi hota.
-// Bahar ke links normal <a> se with target="_blank", taaki naya tab khule.
+
 const internal = [
   { to: '/', label: 'Dashboard', glyph: '◧' },
   { to: '/projects', label: 'Projects', glyph: '▤' },
@@ -125,7 +124,7 @@ export default function Footer() {
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-ink-500 sm:flex-row">
             <p>© {new Date().getFullYear()} TaskFlow. All rights reserved.</p>
             <p className="tnum">
-              React · Express · MongoDB — session secured with an httpOnly cookie
+              React · Express · MongoDB · Vite · Tailwind CSS
             </p>
           </div>
         </div>

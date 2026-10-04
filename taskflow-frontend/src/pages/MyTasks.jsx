@@ -169,9 +169,13 @@ export default function MyTasks() {
             const assignee = t.assigneeId?.name
 
             return (
+              /* min-w-0 + flex-wrap: grid children ka default `min-width: auto`
+                 hota hai, jisse lamba title poori row ko 393px screen se bahar
+                 push kar deta tha. Wrap hone se "Open" button chhoti screen
+                 par agli line par aa jata hai. */
               <li
                 key={t._id}
-                className={`flex items-start gap-3 rounded-xl px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/85 ${
+                className={`flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2 rounded-xl px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/85 ${
                   late ? 'bg-rose-50/70' : done ? 'bg-white/40' : 'bg-white/60'
                 }`}
                 style={{
@@ -185,7 +189,9 @@ export default function MyTasks() {
                   {meta.label}
                 </span>
 
-                <div className="min-w-0 flex-1">
+                {/* basis chhota rakha hai taaki 393px par title aur chips saath
+                     fit na hon to title apni line par aa jaye */}
+                <div className="min-w-0 flex-1 basis-40">
                   <p
                     className={`truncate text-sm font-semibold ${
                       done ? 'text-ink-300 line-through' : 'text-ink-900'
@@ -194,7 +200,7 @@ export default function MyTasks() {
                     {t.title}
                   </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-500">
-                    {t.projectId?.name && <span>{t.projectId.name}</span>}
+                    {t.projectId?.name && <span className="min-w-0 truncate">{t.projectId.name}</span>}
                     {t.dueDate && (
                       <span className={late ? 'font-semibold text-prio-high' : ''}>
                         {late ? 'Overdue · ' : 'Due '}
@@ -212,7 +218,7 @@ export default function MyTasks() {
                 </span>
 
                 {assignee && (
-                  <span className="hidden items-center gap-1.5 shrink-0 text-xs font-medium text-ink-500 sm:flex">
+                  <span className="hidden min-w-0 items-center gap-1.5 shrink-0 text-xs font-medium text-ink-500 sm:flex">
                     <span
                       className="grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold text-white"
                       style={{ backgroundImage: avatarGradient(assignee) }}
@@ -226,7 +232,7 @@ export default function MyTasks() {
 
                 <Link
                   to={`/projects/${t.projectId?._id ?? t.projectId}`}
-                  className="btn-chip btn-outline shrink-0"
+                  className="btn-chip btn-outline ml-auto shrink-0 sm:ml-0"
                 >
                   Open
                 </Link>
