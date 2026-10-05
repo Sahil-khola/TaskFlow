@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../api/api.js'
 import { AuthContext } from '../context/AuthContext.jsx'
@@ -11,6 +11,9 @@ import {
   roleMeta,
 } from '../component/lookups.js'
 
+// Ek page me 5-7 projects. 6 se 50/50 round-off accha lagta hai.
+const PAGE_SIZE = 6
+
 export default function Projects() {
   const { user } = useContext(AuthContext)
   const [projects, setProjects] = useState(null)
@@ -20,14 +23,23 @@ export default function Projects() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [page, setPage] = useState(1)
 
   const load = () => {
     setLoading(true)
     api.get('/projects')
-      .then(res => { setProjects(res.data.data || []); setErr('') })
+      .then(res => { setProjects(res.data.data || []); setErr(''); setPage(1) })
       .catch(e => setErr(e.response?.data?.msg || 'We could not load your projects. Please try again.'))
       .finally(() => setLoading(false))
   }
+
+  // Client-side slice — sirf current page ke 6 projects render honge
+  const pageCount = Math.ceil((projects?.length || 0) / PAGE_SIZE)
+  const pageProjects = useMemo(() => {
+    if (!projects) return []
+    const start = (page - 1) * PAGE_SIZE
+    return projects.slice(start, start + PAGE_SIZE)
+  }, [projects, page])
 
   // Page load hote hi projects fetch karo — bina iske load() kabhi call nahi hota
   // aur screen "Loading projects..." pe atak jata hai
@@ -127,28 +139,31 @@ export default function Projects() {
           />
         </div>
       ) : (
-        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger">
-          {projects.map((p, i) => {
-            const r = roleMeta(myRole(p, user?._id))
-            const members = p.members || []
-            return (
-              <Link
-                key={p._id}
-                to={`/projects/${p._id}`}
-                className="glass lift glow-indigo group relative flex flex-col overflow-hidden rounded-2xl p-5"
-              >
-                {/* top accent line — rotates hue across the grid */}
-                <span
-                  className="absolute inset-x-0 top-0 h-1"
-                  aria-hidden="true"
-                  style={{
-                    backgroundImage: [
-                      'linear-gradient(90deg,#6366F1,#A855F7)',
-                      'linear-gradient(90deg,#06B6D4,#6366F1)',
-                      'linear-gradient(90deg,#059669,#06B6D4)',
-                    ][i % 3],
-                  }}
-                />
+        <>
+          <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger">
+            {pageProjects.map((p, i) => {
+              const r = roleMeta(myRole(p, user?._id))
+              const members = p.members || []
+              // absolute index — hue strip ho page-change par bhi consistent rahe
+              const absIndex = (page - 1) * PAGE_SIZE + i
+              return (
+                <Link
+                  key={p._id}
+                  to={`/projects/${p._id}`}
+                  className="glass lift glow-indigo group relative flex flex-col overflow-hidden rounded-2xl p-5"
+                >
+                  {/* top accent line — rotates hue across the grid */}
+                  <span
+                    className="absolute inset-x-0 top-0 h-1"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: [
+                        'linear-gradient(90deg,#6366F1,#A855F7)',
+                        'linear-gradient(90deg,#06B6D4,#6366F1)',
+                        'linear-gradient(90deg,#059669,#06B6D4)',
+                      ][absIndex % 3],
+                    }}
+                  />
 
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-display text-base font-bold text-ink-900 transition-colors group-hover:text-brand-600">
@@ -194,6 +209,34 @@ export default function Projects() {
             )
           })}
         </div>
+
+        {/* Pagination — sirf jab 1 page se ziyada ho. Ek page pe 6 projects dikhayenge. */}
+        {pageCount > 1 && (
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <p className="text-xs font-medium text-ink-500">
+              Page {page} of {pageCount}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(p - 1, 1))}
+                disabled={page === 1}
+                className="btn-chip border border-ink-900/12 px-3 py-1.5 text-sm font-semibold text-ink-500 disabled:opacity-40"
+              >
+                ← Prev
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.min(p + 1, pageCount))}
+                disabled={page === pageCount}
+                className="btn-chip border border-ink-900/12 px-3 py-1.5 text-sm font-semibold text-ink-500 disabled:opacity-40"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+      </>
       )}
     </div>
   )
