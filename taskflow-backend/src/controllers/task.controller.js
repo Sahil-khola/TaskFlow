@@ -206,9 +206,13 @@ export const myTasks = async (req, res) => {
     const projects = await Project.find({ members: { $elemMatch: { userId: req.user.id } } }).select("_id");
     const projectIds = projects.map((p) => p._id);
 
+    // Sirf wahi tasks jinke ASSIGNEE logged-in user hai.
+    // Pehle `creatorId` bhi $or me tha, jisse wo tasks bhi aa jate the jo
+    // user ne banaye the par kisi aur ko assign kiye the — "My Tasks" me
+    // unka koi matlab nahi, sirf mere assignee wale chahiye.
     const tasks = await Task.find({
       projectId: { $in: projectIds },
-      $or: [{ creatorId: req.user.id }, { assigneeId: req.user.id }],
+      assigneeId: req.user.id,
     })
       .sort({ dueDate: 1, status: 1 })
       .populate("assigneeId", "name email")
