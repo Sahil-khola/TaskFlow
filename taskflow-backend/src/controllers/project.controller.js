@@ -1,6 +1,7 @@
 import Project from '../models/Project.js';
 import User from '../models/User.js';
 import Task from '../models/Task.js';
+import Comment from '../models/Comment.js';
 import mongoose from 'mongoose';
 
 
@@ -133,8 +134,25 @@ export const deleteProject = async (req, res) => {
       return res.status(403).json({ success: false, msg: 'Only Owner can delete this project' });
     }
 
-    await Project.deleteOne({ _id: context.project._id });
-    res.status(200).json({ success: true, msg: 'Project deleted successfully' });
+    const projectId = context.project._id;
+
+    // Sirf project hatane se uske tasks aur comments database me orphaned
+    // reh jate — unka projectId ab kisi valid document ko point nahi karta.
+    // Isliye pehle child records clean karo, phir project.
+    const tasks = await Task.find({ projectId }).select('_id');
+    const taskIds = tasks.map((t) => t._id);
+
+    if (taskIds.length) {
+      await Comment.deleteMany({ taskId: { $in: taskIds } });
+    }
+    await Task.deleteMany({ projectId });
+    await Project.deleteOne({ _id: projectId });
+
+    res.status(200).json({
+      success: true,
+      msg: 'Project deleted successfully',
+      data: { deletedTasks: taskIds.length },
+    });
   } catch (error) {
     console.error('DeleteProject error:', error);
     res.status(500).json({ success: false, msg: 'Internal server error' });

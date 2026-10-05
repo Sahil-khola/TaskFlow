@@ -29,8 +29,8 @@ const connect = async () => {
 
     const [owner, admin, member] = await User.create([
       { name: 'Owner', email: 'owner@gmail.com', password: hash },
-      { name: 'Admin', email: 'admin@gmail.com', password: hash },
-      { name: 'Member', email: 'member@gmail.com', password: hash },
+      { name: 'sahil', email: 'sahil@gmail.com', password: hash },
+      { name: 'karan', email: 'karan@gmail.com', password: hash },
     ]);
 
     // Membership alag alag rakhi hai taaki permissions bhi test ho sakein:

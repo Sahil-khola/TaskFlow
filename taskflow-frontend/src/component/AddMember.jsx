@@ -2,18 +2,7 @@ import { useState, useRef } from 'react'
 import api from '../api/api.js'
 import { avatarGradient, initials, roleMeta } from './lookups.js'
 
-/**
- * Project me member add karne ka control.
- *
- * Flow: email type karo -> user search -> result select karo -> role chuno -> Add.
- * Backend me koi "find user by email" endpoint pehle nahi tha, isliye
- * `GET /api/auth/users?email=` use ho raha hai (auth middleware ke peeche).
- *
- * Props:
- *   projectId — kis project me member add karna hai
- *   members   — current members, taaki already-added user dobara na dikhe
- *   onAdded   — add hone ke baad parent ko refresh karne ke liye
- */
+
 export default function AddMember({ projectId, members = [], onAdded }) {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
@@ -36,7 +25,6 @@ export default function AddMember({ projectId, members = [], onAdded }) {
 
   const toggle = () => {
     setOpen(o => {
-      // Band karte waqt sab reset, taaki next open saaf rahe
       if (o) reset()
       return !o
     })
@@ -48,7 +36,6 @@ export default function AddMember({ projectId, members = [], onAdded }) {
     setErr('')
     setNotice('')
 
-    // Backend 3 character se kam query maanta hai — yahan pehle hi rok dete hain
     if (email.trim().length < 3) {
       setErr('Please enter at least 3 characters.')
       return
@@ -60,7 +47,6 @@ export default function AddMember({ projectId, members = [], onAdded }) {
       const found = res.data.data || []
       const already = new Set(members.map(m => String(m.userId?._id ?? m.userId)))
 
-      // Jo pehle se member hai unko list me dikhana bekaar hai — hata dete hain
       const fresh = found.filter(u => !already.has(String(u._id)))
 
       setResults(fresh)

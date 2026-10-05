@@ -10,9 +10,7 @@ import ProjectDetails from './pages/ProjectDetails.jsx'
 import MyTasks from './pages/MyTasks.jsx'
 import UpdateProject from './pages/UpdateProject.jsx'
 
-// Navbar aur Footer <Routes> ke andar direct nahi aa sakte — react-router har child
-// ko <Route> maangta hai, warna "is not a <Route> component" error aata hai.
-// Isliye dono ko ek plain wrapper component me rakhte hain.
+
 const Layout = ({ children }) => (
   <div className="flex min-h-screen flex-col">
     <Navbar />

@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, useCallback, useRef } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -248,6 +248,7 @@ function Column({ status, tasks, onQuickMove, pending }) {
 
 export default function ProjectDetails() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { user } = useContext(AuthContext)
   const [project, setProject] = useState(null)
   const [tasks, setTasks] = useState([])
@@ -323,6 +324,23 @@ export default function ProjectDetails() {
       load({ silent: true })
     } catch (er) {
       setErr(er.response?.data?.msg || 'We could not remove that member. Please try again.')
+    }
+  }
+
+  // Delete + confirm — Owner hi kar sakta hai, backend bhi yehi enforce karta hai
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const deleteProject = async () => {
+    setDeleting(true)
+    try {
+      await api.delete(`/projects/${id}`)
+      navigate('/projects')
+    } catch (er) {
+      setErr(er.response?.data?.msg || 'We could not delete this project. Please try again.')
+      setConfirmingDelete(false)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -487,6 +505,40 @@ export default function ProjectDetails() {
                 Edit project
               </Link>
             )}
+
+            {/* Sirf OWNER. Backend `deleteProject` bhi OWNER ko hi allow karta hai. */}
+            {role === 'OWNER' &&
+              (confirmingDelete ? (
+                <span className="animate-scale-in flex flex-wrap items-center gap-2 rounded-xl border border-alert/30 bg-alert-soft/60 px-2.5 py-1.5">
+                  <span className="text-xs font-semibold text-[#9F1239]">
+                    Delete this project and all its tasks?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={deleteProject}
+                    disabled={deleting}
+                    className="rounded-lg bg-alert px-2.5 py-1 text-xs font-bold text-white transition hover:bg-prio-high disabled:opacity-60"
+                  >
+                    {deleting ? 'Deleting...' : 'Yes, delete'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(false)}
+                    disabled={deleting}
+                    className="rounded-lg border border-ink-900/12 px-2.5 py-1 text-xs font-semibold text-ink-500 transition hover:border-ink-900/30 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  className="btn-chip border border-alert/35 px-3.5 py-1.5 text-sm font-semibold text-[#9F1239] transition hover:bg-alert hover:text-white"
+                >
+                  Delete project
+                </button>
+              ))}
           </div>
         </header>
 
