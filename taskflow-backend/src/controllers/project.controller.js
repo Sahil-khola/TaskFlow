@@ -103,9 +103,11 @@ export const updateProject = async (req, res) => {
     const context = await loadProjectForUser(req, res);
     if (!context) return;
 
-    // Update sirf OWNER ya ADMIN kar sakta hai
-    if (!isManager(context.role)) {
-      return res.status(403).json({ success: false, msg: 'Owner or Admin access required' });
+    // Project ka naam/description sirf OWNER badal sakta hai.
+    // Admin ke paas member-management hai par project rename nahi —
+    // ownership change na ho sake isliye ye jaan-boojh kar OWNER-only rakha hai.
+    if (context.role !== 'OWNER') {
+      return res.status(403).json({ success: false, msg: 'Only Owner can edit this project' });
     }
 
     if (name) context.project.name = name;
@@ -159,7 +161,7 @@ export const deleteProject = async (req, res) => {
   }
 };
 
-// Add Member (Only Owner)
+// Add Member (Owner + Admin)
 export const addMember = async (req, res) => {
   try {
     const { userId, role } = req.body;
@@ -181,9 +183,14 @@ export const addMember = async (req, res) => {
     const context = await loadProjectForUser(req, res);
     if (!context) return;
 
-    // Only Owner can add members
-    if (context.role !== 'OWNER') {
-      return res.status(403).json({ success: false, msg: 'Only Owner can add members' });
+    // Owner aur Admin dono member add kar sakte hain
+    if (!isManager(context.role)) {
+      return res.status(403).json({ success: false, msg: 'Only Owner or Admin can add members' });
+    }
+
+    // Project ka OWNER kabhi dobara add nahi hona chahiye
+    if (context.project.ownerId.toString() === userId) {
+      return res.status(400).json({ success: false, msg: 'Owner is already a member of this project' });
     }
 
     const user = await User.findById(userId);
@@ -209,7 +216,7 @@ export const addMember = async (req, res) => {
   }
 };
 
-// Remove Member (Only Owner)
+// Remove Member (Owner + Admin)
 export const removeMember = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -221,12 +228,15 @@ export const removeMember = async (req, res) => {
     const context = await loadProjectForUser(req, res);
     if (!context) return;
 
-    if (context.role !== 'OWNER') {
-      return res.status(403).json({ success: false, msg: 'Only Owner can remove members' });
+    // Owner aur Admin dono member remove kar sakte hain
+    if (!isManager(context.role)) {
+      return res.status(403).json({ success: false, msg: 'Only Owner or Admin can remove members' });
     }
 
+    // Project ka OWNER kabhi remove nahi ho sakta — warna project ka koi
+    // malik hi na rahe. Ye guard Admin par bhi lagta hai.
     if (context.project.ownerId.toString() === userId) {
-      return res.status(400).json({ success: false, msg: 'Owner cannot remove themselves' });
+      return res.status(400).json({ success: false, msg: 'Owner cannot be removed from the project' });
     }
 
     const isMember = context.project.members.some((m) => m.userId.toString() === userId);
@@ -249,6 +259,55 @@ export const removeMember = async (req, res) => {
     });
   } catch (err) {
     console.error('RemoveMember error:', err);
+    res.status(500).json({ success: false, msg: 'Internal server error' });
+  }
+};
+
+// Change Member Role (Owner + Admin)
+export const updateMemberRole = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, msg: 'Invalid userId' });
+    }
+    // OWNER assign nahi kar sakte — ownership fixed rehta hai
+    if (!ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        msg: `Invalid role. Only ${ASSIGNABLE_ROLES.join(' or ')} can be assigned`,
+      });
+    }
+
+    const context = await loadProjectForUser(req, res);
+    if (!context) return;
+
+    if (!isManager(context.role)) {
+      return res.status(403).json({ success: false, msg: 'Only Owner or Admin can change roles' });
+    }
+
+    // Owner's role kabhi change nahi ho sakta, warna project ka malik hi na rahe
+    if (context.project.ownerId.toString() === userId) {
+      return res.status(400).json({ success: false, msg: "Owner's role cannot be changed" });
+    }
+
+    const member = context.project.members.find((m) => m.userId.toString() === userId);
+    if (!member) {
+      return res.status(404).json({ success: false, msg: 'Member not found in this project' });
+    }
+
+    member.role = role;
+    await context.project.save();
+
+    const updated = await context.project.populate('members.userId', 'name email');
+    res.status(200).json({
+      success: true,
+      msg: 'Member role updated successfully',
+      data: updated,
+    });
+  } catch (err) {
+    console.error('UpdateMemberRole error:', err);
     res.status(500).json({ success: false, msg: 'Internal server error' });
   }
 };

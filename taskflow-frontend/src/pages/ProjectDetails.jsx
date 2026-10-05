@@ -38,7 +38,7 @@ const isColumn = (id) => STATUSES.some(s => s.key === String(id))
 
 /* ------------------------------------------------------------------ card */
 
-function TaskCard({ task, onQuickMove, pending }) {
+function TaskCard({ task, onQuickMove, pending, canDelete, onEdit, onDelete }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: task._id, data: { type: 'task', status: task.status } })
 
@@ -56,6 +56,9 @@ function TaskCard({ task, onQuickMove, pending }) {
       onQuickMove={onQuickMove}
       pending={pending}
       dragging={isDragging}
+      canDelete={canDelete}
+      onEdit={onEdit}
+      onDelete={onDelete}
       handleProps={{
         ...attributes,
         ...listeners,
@@ -65,7 +68,19 @@ function TaskCard({ task, onQuickMove, pending }) {
   )
 }
 
-function TaskCardBody({ task, innerRef, style, onQuickMove, pending, handleProps, dragging, overlay }) {
+function TaskCardBody({
+  task,
+  innerRef,
+  style,
+  onQuickMove,
+  pending,
+  handleProps,
+  dragging,
+  overlay,
+  canDelete,
+  onEdit,
+  onDelete,
+}) {
   const prio = priorityMeta(task.priority)
   const late = isOverdue(task)
   const done = task.status === 'DONE'
@@ -104,21 +119,80 @@ function TaskCardBody({ task, innerRef, style, onQuickMove, pending, handleProps
           >
             {task.title}
           </h4>
-          <button
-            type="button"
-            {...handleProps}
-            aria-label={`Drag ${task.title}`}
-            className="-mr-1 -mt-1 shrink-0 cursor-grab touch-none rounded-lg p-1 text-ink-300 transition hover:bg-white/70 hover:text-ink-700 active:cursor-grabbing"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
-              <circle cx="4.5" cy="2.5" r="1.3" />
-              <circle cx="9.5" cy="2.5" r="1.3" />
-              <circle cx="4.5" cy="7" r="1.3" />
-              <circle cx="9.5" cy="7" r="1.3" />
-              <circle cx="4.5" cy="11.5" r="1.3" />
-              <circle cx="9.5" cy="11.5" r="1.3" />
-            </svg>
-          </button>
+
+          {/* Drag handle + edit/delete. Overlay me sirf handle — floated card
+              pe buttons click karna confuse karta hai. */}
+          {!overlay && (
+            <div className="-mr-1 -mt-1 flex shrink-0 items-center gap-0.5">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(task._id)}
+                  aria-label={`Edit ${task.title}`}
+                  className="rounded-lg p-1 text-ink-300 transition hover:bg-white/70 hover:text-brand-600"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path
+                      d="M9.5 1.8 12.2 4.5 5.6 11.1l-3.4.7.7-3.4 6.6-6.6Z"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
+              {onDelete && canDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(task._id)}
+                  aria-label={`Delete ${task.title}`}
+                  className="rounded-lg p-1 text-ink-300 transition hover:bg-alert-soft hover:text-prio-high"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path
+                      d="M2.5 3.8h9M5.5 3.8V2.6h3v1.2M3.6 3.8l.6 7.1a.9.9 0 0 0 .9.8h3.8a.9.9 0 0 0 .9-.8l.6-7.1"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
+              <button
+                type="button"
+                {...handleProps}
+                aria-label={`Drag ${task.title}`}
+                className="cursor-grab touch-none rounded-lg p-1 text-ink-300 transition hover:bg-white/70 hover:text-ink-700 active:cursor-grabbing"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+                  <circle cx="4.5" cy="2.5" r="1.3" />
+                  <circle cx="9.5" cy="2.5" r="1.3" />
+                  <circle cx="4.5" cy="7" r="1.3" />
+                  <circle cx="9.5" cy="7" r="1.3" />
+                  <circle cx="4.5" cy="11.5" r="1.3" />
+                  <circle cx="9.5" cy="11.5" r="1.3" />
+                </svg>
+              </button>
+            </div>
+          )}
+          {overlay && (
+            <button
+              type="button"
+              {...handleProps}
+              aria-label={`Drag ${task.title}`}
+              className="-mr-1 -mt-1 shrink-0 cursor-grab touch-none rounded-lg p-1 text-ink-300"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+                <circle cx="4.5" cy="2.5" r="1.3" />
+                <circle cx="9.5" cy="2.5" r="1.3" />
+                <circle cx="4.5" cy="7" r="1.3" />
+                <circle cx="9.5" cy="7" r="1.3" />
+                <circle cx="4.5" cy="11.5" r="1.3" />
+                <circle cx="9.5" cy="11.5" r="1.3" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {task.description && (
@@ -184,7 +258,7 @@ function TaskCardBody({ task, innerRef, style, onQuickMove, pending, handleProps
 
 /* --------------------------------------------------------------- column */
 
-function Column({ status, tasks, onQuickMove, pending }) {
+function Column({ status, tasks, onQuickMove, pending, canDeleteFor, onEdit, onDelete }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.key, data: { type: 'column', status: status.key } })
 
   return (
@@ -226,7 +300,15 @@ function Column({ status, tasks, onQuickMove, pending }) {
         >
           <div className="grid gap-2.5">
             {tasks.map(t => (
-              <TaskCard key={t._id} task={t} onQuickMove={onQuickMove} pending={pending} />
+              <TaskCard
+                key={t._id}
+                task={t}
+                onQuickMove={onQuickMove}
+                pending={pending}
+                canDelete={canDeleteFor(t)}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
             ))}
           </div>
         </SortableContext>
@@ -256,6 +338,19 @@ export default function ProjectDetails() {
   const [err, setErr] = useState('')
   const [saving, setSaving] = useState(false)
   const [pendingMove, setPendingMove] = useState('')
+  const [removingMember, setRemovingMember] = useState('')
+  const [changingRole, setChangingRole] = useState('')
+  const [editingId, setEditingId] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState('')
+  const [deletingTask, setDeletingTask] = useState(false)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    priority: 'MEDIUM',
+    dueDate: '',
+    assigneeId: '',
+  })
   const [openForm, setOpenForm] = useState(true)
   const [activeId, setActiveId] = useState(null)
   const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '' })
@@ -319,11 +414,28 @@ export default function ProjectDetails() {
   }
 
   const removeMember = async (userId) => {
+    setRemovingMember(userId)
+    setErr('')
     try {
       await api.delete(`/projects/${id}/members/${userId}`)
       load({ silent: true })
     } catch (er) {
       setErr(er.response?.data?.msg || 'We could not remove that member. Please try again.')
+    } finally {
+      setRemovingMember('')
+    }
+  }
+
+  const changeRole = async (userId, role) => {
+    setChangingRole(userId)
+    setErr('')
+    try {
+      await api.patch(`/projects/${id}/members/${userId}`, { role })
+      load({ silent: true })
+    } catch (er) {
+      setErr(er.response?.data?.msg || 'We could not change that role. Please try again.')
+    } finally {
+      setChangingRole('')
     }
   }
 
@@ -420,6 +532,74 @@ export default function ProjectDetails() {
     load({ silent: true })
   }
 
+  /* ---- task edit / delete ---- */
+
+  // Owner/Admin koi bhi task delete kar sakta hai, Member sirf apna assigned task.
+  // Backend yehi rule enforce karta hai — UI bas wahi buttons dikhata hai.
+  const canDeleteFor = (task) => {
+    if (role === 'OWNER' || role === 'ADMIN') return true
+    return Boolean(task.assigneeId) && String(task.assigneeId._id ?? task.assigneeId) === String(user?._id)
+  }
+
+  const startEdit = (taskId) => {
+    const t = tasks.find(x => x._id === taskId)
+    if (!t) return
+    setEditingId(taskId)
+    setEditForm({
+      title: t.title || '',
+      description: t.description || '',
+      priority: t.priority || 'MEDIUM',
+      dueDate: t.dueDate ? String(t.dueDate).slice(0, 10) : '',
+      assigneeId: String(t.assigneeId?._id ?? t.assigneeId ?? ''),
+    })
+    setErr('')
+  }
+
+  const cancelEdit = () => {
+    setEditingId('')
+    setEditForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '' })
+  }
+
+  const saveEdit = async (e) => {
+    e.preventDefault()
+    setSavingEdit(true)
+    setErr('')
+    try {
+      await api.patch(`/tasks/${editingId}`, {
+        title: editForm.title.trim(),
+        description: editForm.description,
+        priority: editForm.priority,
+        dueDate: editForm.dueDate || null,
+        assigneeId: editForm.assigneeId || null,
+      })
+      cancelEdit()
+      load({ silent: true })
+    } catch (er) {
+      setErr(er.response?.data?.msg || 'We could not save those changes. Please try again.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  const askDelete = (taskId) => {
+    setErr('')
+    setConfirmDeleteId(taskId)
+  }
+
+  const doDelete = async () => {
+    setDeletingTask(true)
+    setErr('')
+    try {
+      await api.delete(`/tasks/${confirmDeleteId}`)
+      setConfirmDeleteId('')
+      load({ silent: true })
+    } catch (er) {
+      setErr(er.response?.data?.msg || 'We could not delete that task. Please try again.')
+    } finally {
+      setDeletingTask(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-9">
@@ -453,6 +633,8 @@ export default function ProjectDetails() {
   const rolePill = roleMeta(role)
   const activeTask = activeId ? tasks.find(t => t._id === activeId) : null
   const members = project?.members || []
+  // Owner + Admin dono member management kar sakte hain
+  const canManageMembers = role === 'OWNER' || role === 'ADMIN'
 
   return (
     <DndContext
@@ -495,9 +677,10 @@ export default function ProjectDetails() {
             >
               {rolePill.label}
             </span>
-            {/* Backend `updateProject` bhi sirf OWNER/ADMIN ko allow karta hai.
-                Editing ab dedicated /updateProject page par hoti hai, modal nahi. */}
-            {(role === 'OWNER' || role === 'ADMIN') && (
+            {/* Sirf OWNER project rename/description edit kar sakta hai.
+                Backend `updateProject` bhi OWNER ko hi allow karta hai, isliye
+                Admin ko link dikhana misleading hota. */}
+            {role === 'OWNER' && (
               <Link
                 to={`/updateProject/${project._id}`}
                 className="btn-chip border border-ink-900/12 px-3.5 py-1.5 text-sm font-semibold text-ink-500 transition hover:border-brand-500/40 hover:text-brand-600"
@@ -559,8 +742,8 @@ export default function ProjectDetails() {
             <span className="ml-2 text-sm font-semibold tnum text-ink-300">{members.length}</span>
           </h2>
 
-          {/* Sirf Owner hi member add kar sakta hai — backend bhi yehi enforce karta hai */}
-          {role === 'OWNER' && (
+          {/* Owner aur Admin dono member add kar sakte hain — backend yehi enforce karta hai */}
+          {(role === 'OWNER' || role === 'ADMIN') && (
             <AddMember
               projectId={id}
               members={members}
@@ -599,13 +782,31 @@ export default function ProjectDetails() {
                     >
                       {r.label}
                     </span>
-                    {role === 'OWNER' && m.role !== 'OWNER' && (
+
+                    {/* Role change + remove dono Owner/Admin ke liye.
+                        Owner ki row kabhi editable nahi — backend bhi OWNER
+                        ka role change ya remove reject kar deta hai. */}
+                    {canManageMembers && m.role !== 'OWNER' && (
+                      <select
+                        value={m.role}
+                        disabled={changingRole === uid}
+                        aria-label={`Role for ${m.userId?.name || 'member'}`}
+                        onChange={e => changeRole(uid, e.target.value)}
+                        className="rounded-lg border border-ink-900/12 bg-white/70 px-2 py-1 text-xs font-semibold text-ink-700 transition hover:border-brand-500/40 focus:border-brand-500 focus:outline-none disabled:opacity-60"
+                      >
+                        <option value="MEMBER">Member</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
+                    )}
+
+                    {canManageMembers && m.role !== 'OWNER' && (
                       <button
                         type="button"
                         onClick={() => removeMember(uid)}
-                        className="btn-chip border border-prio-high/30 text-prio-high hover:bg-alert-soft"
+                        disabled={removingMember === uid}
+                        className="btn-chip border border-prio-high/30 text-prio-high hover:bg-alert-soft disabled:opacity-60"
                       >
-                        Remove
+                        {removingMember === uid ? 'Removing...' : 'Remove'}
                       </button>
                     )}
                   </div>
@@ -734,9 +935,127 @@ export default function ProjectDetails() {
                   .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))}
                 onQuickMove={move}
                 pending={Boolean(pendingMove)}
+                canDeleteFor={canDeleteFor}
+                onEdit={startEdit}
+                onDelete={askDelete}
               />
             ))}
           </div>
+
+          {/* Edit form — card ke neeche slide hota hai, popup nahi */}
+          {editingId && (
+            <form
+              onSubmit={saveEdit}
+              className="glass-strong animate-fade-up mt-5 grid gap-3.5 rounded-2xl p-4 sm:p-5"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-display text-base font-bold text-ink-900">Edit task</h3>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="btn-chip border border-ink-900/12 px-3 py-1.5 text-xs font-semibold text-ink-500"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">Title</span>
+                <input
+                  value={editForm.title}
+                  onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                  required
+                  className="field"
+                />
+              </label>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">
+                  Description <span className="normal-case tracking-normal text-ink-300">(optional)</span>
+                </span>
+                <textarea
+                  value={editForm.description}
+                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={2}
+                  className="field resize-y"
+                />
+              </label>
+
+              <div className="grid gap-3.5 sm:grid-cols-3">
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">Priority</span>
+                  <select
+                    value={editForm.priority}
+                    onChange={e => setEditForm({ ...editForm, priority: e.target.value })}
+                    className="field"
+                  >
+                    {['LOW', 'MEDIUM', 'HIGH'].map(p => (
+                      <option key={p} value={p}>
+                        {priorityMeta(p).label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">Due date</span>
+                  <input
+                    type="date"
+                    value={editForm.dueDate}
+                    onChange={e => setEditForm({ ...editForm, dueDate: e.target.value })}
+                    className="field"
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">Assignee</span>
+                  <select
+                    value={editForm.assigneeId}
+                    onChange={e => setEditForm({ ...editForm, assigneeId: e.target.value })}
+                    className="field"
+                  >
+                    <option value="">Unassigned</option>
+                    {members.map(m => (
+                      <option key={memberId(m)} value={memberId(m)}>
+                        {m.userId?.name || 'Unknown member'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingEdit}
+                className="btn-gradient justify-self-start rounded-xl px-5 py-2.5 text-sm font-semibold"
+              >
+                {savingEdit ? 'Saving…' : 'Save changes'}
+              </button>
+            </form>
+          )}
+
+          {/* Delete confirm — inline strip, taaki confirm ka option dikhe */}
+          {confirmDeleteId && (
+            <div className="animate-scale-in mt-5 flex flex-wrap items-center gap-2 rounded-xl border border-alert/30 bg-alert-soft/60 px-3 py-2.5">
+              <span className="text-xs font-semibold text-[#9F1239]">
+                Delete this task? This cannot be undone.
+              </span>
+              <button
+                type="button"
+                onClick={doDelete}
+                disabled={deletingTask}
+                className="rounded-lg bg-alert px-3 py-1.5 text-xs font-bold text-white transition hover:bg-prio-high disabled:opacity-60"
+              >
+                {deletingTask ? 'Deleting…' : 'Yes, delete'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId('')}
+                disabled={deletingTask}
+                className="rounded-lg border border-ink-900/12 px-3 py-1.5 text-xs font-semibold text-ink-500 transition hover:border-ink-900/30 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
 
           {!tasks.length && (
             <div className="mt-5">

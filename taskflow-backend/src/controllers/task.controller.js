@@ -201,6 +201,107 @@ export const moveTask = async (req, res) => {
   }
 };
 
+export const updateTask = async (req, res) => {
+  try {
+    const context = await loadTaskForUser(req, res, req.params.id);
+    if (!context) return;
+    const { task, project } = context;
+
+    const { title, description, priority, dueDate, assigneeId } = req.body;
+
+    if (title !== undefined && !String(title).trim()) {
+      return res.status(400).json({ success: false, msg: "Title cannot be empty" });
+    }
+    if (priority !== undefined && !PRIORITIES.includes(priority)) {
+      return res.status(400).json({ success: false, msg: `Invalid priority. Use ${PRIORITIES.join(", ")}` });
+    }
+
+    if (assigneeId !== undefined) {
+      // null ya "" ka matlab unassign
+      if (assigneeId === null || assigneeId === "") {
+        task.assigneeId = null;
+      } else {
+        if (!mongoose.isValidObjectId(assigneeId)) {
+          return res.status(400).json({ success: false, msg: "Invalid assigneeId" });
+        }
+        const isMember = project.members.some((m) => m.userId.toString() === assigneeId);
+        if (!isMember) {
+          return res.status(403).json({ success: false, msg: "Assignee is not a member of this project" });
+        }
+        task.assigneeId = assigneeId;
+      }
+    }
+
+    if (title !== undefined) task.title = String(title).trim();
+    if (description !== undefined) task.description = description;
+    if (priority !== undefined) task.priority = priority;
+    if (dueDate !== undefined) task.dueDate = dueDate || null;
+
+    await task.save();
+
+    const updated = await Task.findById(task._id).populate("assigneeId", "name email");
+    res.status(200).json({
+      success: true,
+      msg: "Task updated successfully",
+      data: updated,
+    });
+  } catch (err) {
+    console.error("UpdateTask error:", err);
+    res.status(500).json({ success: false, msg: "Internal server error" });
+  }
+};
+
+// Delete Task — Owner/Admin koi bhi task, Member sirf apna (assignee)
+export const deleteTask = async (req, res) => {
+  try {
+    const context = await loadTaskForUser(req, res, req.params.id);
+    if (!context) return;
+    const { task, role } = context;
+
+    const isOwnTask = task.assigneeId && task.assigneeId.toString() === req.user.id;
+    if (!isManager(role) && !isOwnTask) {
+      return res.status(403).json({
+        success: false,
+        msg: isOwnTask
+          ? "You can only delete tasks assigned to you"
+          : "Only Owner or Admin can delete this task",
+      });
+    }
+
+    // Task ke saare comments bhi clean karo — warna wo orphan reh jayenge
+    await Comment.deleteMany({ taskId: task._id });
+
+    // Usi status column ke baaki tasks ke positions ko tighten kar do,
+    // warna delete ke baad gap ban jayega
+    const siblings = await Task.find({
+      projectId: task.projectId,
+      status: task.status,
+      _id: { $ne: task._id },
+    })
+      .sort({ position: 1, createdAt: 1 })
+      .select("_id");
+
+    await Task.deleteOne({ _id: task._id });
+
+    if (siblings.length) {
+      await Task.bulkWrite(
+        siblings.map((t, i) => ({
+          updateOne: { filter: { _id: t._id }, update: { $set: { position: i } } },
+        })),
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      msg: "Task deleted successfully",
+      data: { _id: task._id.toString() },
+    });
+  } catch (err) {
+    console.error("DeleteTask error:", err);
+    res.status(500).json({ success: false, msg: "Internal server error" });
+  }
+};
+
 export const myTasks = async (req, res) => {
   try {
     const projects = await Project.find({ members: { $elemMatch: { userId: req.user.id } } }).select("_id");
