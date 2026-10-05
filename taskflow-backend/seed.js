@@ -65,7 +65,7 @@ const connect = async () => {
     const hash = await bcrypt.hash('password123', 10);
 
     const [owner, admin, member] = await User.create([
-      { name: 'Owner', email: 'owner@gmail.com', password: hash },
+      { name: 'neeraj', email: 'neeraj@gmail.com', password: hash },
       { name: 'sahil', email: 'sahil@gmail.com', password: hash },
       { name: 'karan', email: 'karan@gmail.com', password: hash },
     ]);

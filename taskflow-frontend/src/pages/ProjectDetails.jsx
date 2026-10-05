@@ -758,7 +758,7 @@ export default function ProjectDetails() {
               return (
                 <div
                   key={uid}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-white/60 px-3 py-2.5 transition-colors duration-200 hover:bg-white/85"
+                  className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl bg-white/60 px-3 py-2.5 transition-colors duration-200 hover:bg-white/85 sm:flex-nowrap"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <span
@@ -775,7 +775,7 @@ export default function ProjectDetails() {
                       <span className="block truncate text-xs text-ink-500">{m.userId?.email}</span>
                     </span>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
                     <span
                       className="chip"
                       style={{ color: r.text, background: r.bg, border: `1px solid ${r.border}` }}
