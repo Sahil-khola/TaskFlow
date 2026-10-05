@@ -1,5 +1,10 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// cwd ho root ho backend, .env hamesha seed.js ke saath chalega
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
@@ -9,8 +14,40 @@ import Project from './src/models/Project.js';
 import Task from './src/models/Task.js';
 import Comment from './src/models/Comment.js';
 
+// determinism ke liye seeded RNG — dobara run karne par bhi same data milega
+let _s = 0x2F5D;
+const rng = () => { _s = (_s * 1103515245 + 12345) & 0x7fffffff; return _s / 0x7fffffff; };
+const randRange = (lo, hi) => Math.floor(rng() * (hi - lo + 1)) + lo;
+const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+
 const DAY = 24 * 60 * 60 * 1000;
 const daysFromNow = (d) => new Date(Date.now() + d * DAY);
+
+const TASK_TITLES = [
+  'Refine the spec and lock acceptance criteria',
+  'Set up the dev environment with lint + typecheck',
+  'Draft the first cut of API contracts',
+  'Build the landing page hero section',
+  'Wire up authentication and role checks',
+  'Add unit tests for the core modules',
+  'Write the README and setup docs',
+  'Run an accessibility audit on the dashboard',
+  'Profile and fix the slow report query',
+  'Add drag-and-drop to the task board',
+  'Implement notifications for assigned tasks',
+  'Ship the beta to internal testers',
+];
+
+const COMMENT_BODIES = [
+  'Looks good to me, ship it.',
+  'Can we clarify the acceptance criteria here?',
+  'Nice — this matches what we discussed.',
+  'One edge case: what happens if the payload is empty?',
+  'Docs should mention the fallback behaviour.',
+  'Let me know when this is on staging.',
+  'Worth pulling the team to review this one.',
+  'LGTM, just one small comment above.',
+];
 
 const connect = async () => {
   try {
@@ -33,89 +70,117 @@ const connect = async () => {
       { name: 'karan', email: 'karan@gmail.com', password: hash },
     ]);
 
-    // Membership alag alag rakhi hai taaki permissions bhi test ho sakein:
-    // project 2 me Member nahi hai, aur project 3 me Owner khud member nahi hai
-    // (sirf admin ko admin banaya gaya) — isse role-based access check dikhta hai.
-    const projects = await Project.create([
-      {
-        name: 'TaskFlow Website',
-        description: 'Public marketing site and documentation',
-        ownerId: owner._id,
-        members: [
-          { userId: owner._id, role: 'OWNER' },
-          { userId: admin._id, role: 'ADMIN' },
-          { userId: member._id, role: 'MEMBER' },
-        ],
-      },
-      {
-        name: 'Mobile App Redesign',
-        description: 'Rebuilding the mobile experience from scratch',
-        ownerId: owner._id,
-        members: [
-          { userId: owner._id, role: 'OWNER' },
-          { userId: admin._id, role: 'ADMIN' },
-        ],
-      },
-      {
-        name: 'Internal Tools',
-        description: 'Small utilities used by the ops team',
-        ownerId: admin._id,
-        members: [
-          { userId: admin._id, role: 'OWNER' },
-          { userId: member._id, role: 'MEMBER' },
-        ],
-      },
-    ]);
+    const roles = [
+      { userId: owner._id, role: 'OWNER' },
+      { userId: admin._id, role: 'ADMIN' },
+      { userId: member._id, role: 'MEMBER' },
+    ];
+
+    // Membership alag alag rakhi hai taaki permissions bhi test ho sakein.
+    // Har project ka ek OWNER hota hai — wahi ownerId hai.
+    const ownership = [
+      owner._id, owner._id, admin._id, // cycle so Owner/Admin alternate owning
+      owner._id, admin._id, owner._id,
+      admin._id, owner._id, admin._id,
+      owner._id, admin._id, owner._id,
+    ];
+    // har project ke liye kaunke members honge (owner hamesha)
+    const membershipPlan = [
+      [roles[0], roles[1], roles[2]], // Owner, Admin, Member
+      [roles[0], roles[1]],          // Owner, Admin
+      [roles[1], roles[2]],          // Admin(Owner), Member
+      [roles[0], roles[2]],          // Owner, Member
+      [roles[0], roles[1], roles[2]],
+      [roles[2], roles[1]],          // Member(Owner), Admin
+      [roles[0], roles[1]],
+      [roles[1], roles[2]],
+      [roles[0], roles[2]],
+      [roles[0], roles[1], roles[2]],
+      [roles[0], roles[1]],
+      [roles[1], roles[2]],
+    ];
+
+    const projectDefs = [
+      { name: 'TaskFlow Website', desc: 'Public marketing site and documentation' },
+      { name: 'Mobile App Redesign', desc: 'Rebuilding the mobile experience from scratch' },
+      { name: 'Internal Tools', desc: 'Small utilities used by the ops team' },
+      { name: 'Admin Console v2', desc: 'Second-generation admin dashboard' },
+      { name: 'Payments Rewrite', desc: 'Migrating checkout to the new provider' },
+      { name: 'Analytics Pipeline', desc: 'Collect, store and visualise usage events' },
+      { name: 'Customer Portal', desc: 'Self-service space for enterprise clients' },
+      { name: 'API Gateway', desc: 'Unified ingress for all backend services' },
+      { name: 'Design System', desc: 'Shared components and token library' },
+      { name: 'Data Migration Tool', desc: 'One-off tool to move legacy records' },
+      { name: 'Notification Service', desc: 'Email, push and in-app notifications' },
+      { name: 'Search & Discovery', desc: 'Global search across all products' },
+    ];
+
+    const projects = await Project.create(
+      projectDefs.map((p, i) => ({
+        name: p.name,
+        description: p.desc,
+        ownerId: ownership[i],
+        members: membershipPlan[i],
+      })),
+    );
 
     // Task banate waqt position usi status ke column ke andar hona chahiye,
     // isliye har project+status ka apna counter rakha hai.
     const counters = new Map();
-
-    const seedTasks = [
-      // --- Project 1: TaskFlow Website (4 tasks) ---
-      { p: 0, title: 'Build the landing page', description: 'Hero section, feature grid and pricing table', priority: 'HIGH', status: 'TODO', assigneeId: member._id, creatorId: owner._id, dueDate: daysFromNow(5) },
-      { p: 0, title: 'Fix broken login redirect', description: 'Successful login lands on the wrong route', priority: 'HIGH', status: 'IN_PROGRESS', assigneeId: admin._id, creatorId: owner._id, dueDate: daysFromNow(2) },
-      { p: 0, title: 'Write API documentation', description: 'Document every auth and project endpoint', priority: 'MEDIUM', status: 'TODO', assigneeId: member._id, creatorId: owner._id, dueDate: daysFromNow(12) },
-      { p: 0, title: 'Set up CI pipeline', description: 'Lint and build on every pull request', priority: 'LOW', status: 'DONE', assigneeId: owner._id, creatorId: owner._id, dueDate: daysFromNow(-3) },
-
-      // --- Project 2: Mobile App Redesign (4 tasks) ---
-      { p: 1, title: 'Design the onboarding flow', description: 'Four screens with a skip option', priority: 'HIGH', status: 'TODO', assigneeId: admin._id, creatorId: owner._id, dueDate: daysFromNow(8) },
-      { p: 1, title: 'Migrate task list to virtual scrolling', description: 'List stutters past 500 rows', priority: 'MEDIUM', status: 'IN_PROGRESS', assigneeId: admin._id, creatorId: admin._id, dueDate: daysFromNow(4) },
-      { p: 1, title: 'Add offline mode', description: 'Queue writes locally and sync when online', priority: 'LOW', status: 'TODO', assigneeId: owner._id, creatorId: owner._id, dueDate: daysFromNow(-6) }, // overdue
-      { p: 1, title: 'Ship beta to internal testers', description: 'TestFlight build with crash reporting', priority: 'HIGH', status: 'DONE', assigneeId: admin._id, creatorId: owner._id, dueDate: daysFromNow(-2) },
-
-      // --- Project 3: Internal Tools (4 tasks) ---
-      { p: 2, title: 'Bulk member import', description: 'Accept a CSV and create accounts in one pass', priority: 'MEDIUM', status: 'TODO', assigneeId: member._id, creatorId: admin._id, dueDate: daysFromNow(7) },
-      { p: 2, title: 'Audit log viewer', description: 'Show who changed what and when', priority: 'LOW', status: 'TODO', assigneeId: null, creatorId: admin._id, dueDate: daysFromNow(15) },
-      { p: 2, title: 'Fix timezone bug in reports', description: 'Reports show the wrong day for evening logins', priority: 'HIGH', status: 'IN_PROGRESS', assigneeId: member._id, creatorId: admin._id, dueDate: daysFromNow(-4) }, // overdue
-      { p: 2, title: 'Add health check endpoint', description: 'Used by the deploy pipeline to verify readiness', priority: 'LOW', status: 'DONE', assigneeId: owner._id, creatorId: admin._id, dueDate: daysFromNow(-9) },
-    ];
-
     const createdTasks = [];
-    for (const t of seedTasks) {
-      const key = `${t.p}:${t.status}`;
-      const position = counters.get(key) ?? 0;
-      counters.set(key, position + 1);
 
-      const task = await Task.create({
-        projectId: projects[t.p]._id,
-        title: t.title,
-        description: t.description,
-        priority: t.priority,
-        status: t.status,
-        assigneeId: t.assigneeId,
-        creatorId: t.creatorId,
-        dueDate: t.dueDate,
-        position,
-      });
-      createdTasks.push(task);
+    // Har project ke liye 4-6 random tasks banaye
+    for (let pi = 0; pi < projects.length; pi++) {
+      const proj = projects[pi];
+      // sirf usi project ke members se assign karo (owner included)
+      const candidateAssignees = membershipPlan[pi]
+        .filter(r => r.role !== 'OWNER')
+        .map(r => r.userId);
+      const taskCount = randRange(4, 6);
+      for (let ti = 0; ti < taskCount; ti++) {
+        const status = pick(['TODO', 'IN_PROGRESS', 'DONE']);
+        const key = `${pi}:${status}`;
+        const position = counters.get(key) ?? 0;
+        counters.set(key, position + 1);
+
+        const assigneePool = [...candidateAssignees, owner._id];
+        const assigneeId = rng() < 0.15 ? null : pick(assigneePool);
+
+        const task = await Task.create({
+          projectId: proj._id,
+          title: pick(TASK_TITLES),
+          description: 'Covers the work tracked on this card.',
+          priority: pick(['LOW', 'MEDIUM', 'HIGH']),
+          status,
+          assigneeId,
+          creatorId: proj.ownerId,
+          dueDate: daysFromNow(randRange(-10, 14)),
+          position,
+        });
+        createdTasks.push({ task, projectMembers: membershipPlan[pi] });
+      }
     }
 
-    // Comments task #3 aur #4 par (1-indexed)
-    await Comment.create([
-      { taskId: createdTasks[2]._id, authorId: owner._id, body: 'Start with the auth endpoints, those are the most requested.' },
-      { taskId: createdTasks[3]._id, authorId: member._id, body: 'Pipeline is green on the first run.' },
-    ]);
+    // Har project ke liye 4-7 comments — random tasks par spread.
+    const perProject = new Map();
+    for (const { task, projectMembers } of createdTasks) {
+      const arr = perProject.get(task.projectId) ?? [];
+      arr.push({ task, projectMembers });
+      perProject.set(task.projectId, arr);
+    }
+
+    for (const [, items] of perProject) {
+      const commentCount = randRange(4, 7);
+      for (let c = 0; c < commentCount; c++) {
+        const { task, projectMembers } = pick(items);
+        const author = pick(projectMembers).userId;
+        await Comment.create({
+          taskId: task._id,
+          authorId: author,
+          body: pick(COMMENT_BODIES),
+        });
+      }
+    }
 
     // Overdue = dueDate nikal chuka hai aur task DONE nahi hai.
     // DONE wale tasks bhi past dueDate rakhe hain, wo overdue NAHI hote.
